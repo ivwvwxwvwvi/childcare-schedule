@@ -48,10 +48,19 @@
   .pattern-item:hover { background: #f5f5f5; }
   .pattern-item.active { background: #e1f5fe; color: #0288d1; }
   .pattern-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .edit-name-btn {
+  .pattern-actions { display: flex; gap: 4px; }
+  .pattern-memo {
+    width: 100%; min-height: 50px; padding: 8px 12px; margin-bottom: 12px;
+    border: 1px solid #ddd; border-radius: 6px; background: #fdfdfd;
+    font-size: 13px; color: #555; resize: vertical; box-sizing: border-box;
+    font-family: inherit; line-height: 1.4;
+  }
+  .pattern-memo:focus { outline: none; border-color: #90caf9; background: #fff; }
+  .icon-btn {
     background: none; border: none; cursor: pointer; color: #aaa;
     font-size: 12px; padding: 4px;
   }
+  .icon-btn:hover { color: #555; }
   .add-pattern-btn {
     background: #f0f0f0; border: none; padding: 10px; border-radius: 6px;
     font-weight: 700; cursor: pointer; color: #555; width: 100%;
@@ -116,9 +125,9 @@
   }
 
   /* 暗室モード（行全体） */
-  .dark-row td { background-color: #2c3e50; color: #a9b9c9; border-bottom: 1px solid #34495e;}
+  .dark-row td { background-color: #757575; color: #f5f5f5; border-bottom: 1px solid #9e9e9e;}
   .dark-row td.no-border { border-bottom: none !important; }
-  .dark-row td.col-time { background-color: #263645; color: #95a5a6; }
+  .dark-row td.col-time { background-color: #616161; color: #e0e0e0; }
 
   /* タスクブロックのデザイン */
   .task-container {
@@ -144,10 +153,10 @@
   .bg-baby { background-color: #fff3e0; color: #e65100; }
   
   /* 暗室モード中の色調整 */
-  .dark-row .bg-mom { background-color: #883a4d; color: #ffccd5; }
-  .dark-row .bg-dad { background-color: #2b5f7e; color: #b3e5fc; }
-  .dark-row .bg-sleep { background-color: #3f5059; color: #b0bec5; }
-  .dark-row .bg-baby { background-color: #8c5a2b; color: #ffe0b2; }
+  .dark-row .bg-mom { background-color: #b97486; color: #fff; }
+  .dark-row .bg-dad { background-color: #6592b0; color: #fff; }
+  .dark-row .bg-sleep { background-color: #888888; color: #fff; }
+  .dark-row .bg-baby { background-color: #c48c5a; color: #fff; }
 
   .icon-only { font-size: 14px; line-height: 1; }
   .text-badge { padding: 0 4px; }
@@ -205,6 +214,7 @@
     </div>
     <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
   </div>
+  <textarea id="pattern-memo" class="pattern-memo" placeholder="このスケジュールのメモ・補足事項をここに入力..."></textarea>
   <table>
     <thead>
       <tr>
@@ -274,7 +284,7 @@
     "12": { mom: "ごはん", dad: "寝る" }, "13": { mom: "離乳食,おむつ", dad: "寝る" },
     "14": { mom: "", dad: "寝る" }, "15": { mom: "", dad: "寝る" },
     "16": { mom: "ミルク,おむつ", dad: "" }, "17": { mom: "ごはん", dad: "" },
-    "18": { mom: "", dad: "お風呂" }, "19": { mom: "母乳", dad: "おむつ" },
+    "18": { mom: "", dad: "お風呂_baby" }, "19": { mom: "母乳", dad: "おむつ" },
     "20": { mom: "", dad: "" }, "21": { mom: "寝る", dad: "" },
     "22": { mom: "寝る", dad: "ミルク,おむつ" }, "23": { mom: "寝る", dad: "" }
   };
@@ -313,13 +323,21 @@
     patternsData = data.patterns;
     currentSettings = data.settings || defaultSettings;
     
-    // ごはんタスクの表記揺れを「ごはん」に統一するマイグレーション（実行中メモリ上のみ書き換え、次回保存時に反映）
+    // ごはん・お風呂のマイグレーション
     Object.keys(patternsData).forEach(pId => {
       let sched = patternsData[pId].schedule;
       if (sched) {
+        let fixTask = (str) => {
+          if (!str) return str;
+          return str.split(',').map(t => {
+            if (["朝食", "昼食", "夕食", "夜ご飯"].includes(t)) return "ごはん";
+            if (t === "お風呂") return "お風呂_baby";
+            return t;
+          }).join(',');
+        };
         Object.keys(sched).forEach(h => {
-          if (sched[h].mom) sched[h].mom = sched[h].mom.replace(/朝食|昼食|夕食|夜ご飯/g, "ごはん");
-          if (sched[h].dad) sched[h].dad = sched[h].dad.replace(/朝食|昼食|夕食|夜ご飯/g, "ごはん");
+          if (sched[h].mom) sched[h].mom = fixTask(sched[h].mom);
+          if (sched[h].dad) sched[h].dad = fixTask(sched[h].dad);
         });
       }
     });
@@ -331,6 +349,10 @@
 
     currentData = patternsData[currentPatternId].schedule || defaultSchedule;
     appTitle.innerText = patternsData[currentPatternId].name;
+    const memoEl = document.getElementById('pattern-memo');
+    if (document.activeElement !== memoEl) {
+      memoEl.value = patternsData[currentPatternId].memo || "";
+    }
     
     renderSidebar();
     renderTable();
@@ -347,7 +369,10 @@
       li.className = `pattern-item ${id === currentPatternId ? 'active' : ''}`;
       li.innerHTML = `
         <span class="pattern-name" onclick="selectPattern('${id}')">${pattern.name}</span>
-        <button class="edit-name-btn" onclick="editPatternName('${id}')">✏️</button>
+        <div class="pattern-actions">
+          <button class="icon-btn" onclick="editPatternName('${id}')">✏️</button>
+          <button class="icon-btn" onclick="deletePattern('${id}')">🗑️</button>
+        </div>
       `;
       patternList.appendChild(li);
     });
@@ -357,6 +382,7 @@
     currentPatternId = id;
     currentData = patternsData[id].schedule || defaultSchedule;
     appTitle.innerText = patternsData[id].name;
+    document.getElementById('pattern-memo').value = patternsData[id].memo || "";
     renderSidebar();
     renderTable();
   };
@@ -377,6 +403,19 @@
         schedule: defaultSchedule
       });
       currentPatternId = newId;
+    }
+  };
+
+  window.deletePattern = function(id) {
+    if (Object.keys(patternsData).length <= 1) {
+      alert("最後のスケジュールは削除できません。");
+      return;
+    }
+    if (confirm(`スケジュール「${patternsData[id].name}」を削除してもよろしいですか？`)) {
+      set(ref(db, `patterns/${id}`), null);
+      if (currentPatternId === id) {
+        currentPatternId = null; // 次の同期で別のパターンが自動選択されます
+      }
     }
   };
 
@@ -440,8 +479,9 @@
 
   // ブロックのHTML生成（アイコン化と結合判定）
   const taskIcons = { 
-    "母乳": "🤱", "ミルク": "🍼", "離乳食": "🥣", "おむつ": "🚼", "お風呂": "🛁",
-    "寝る": "💤", "ごはん": "🍚", "自由時間": "☕"
+    "母乳": "🤱", "ミルク": "🍼", "離乳食": "🥣", "おむつ": "🚼", "お風呂_baby": "🛁", "お風呂_parent": "🛀",
+    "寝る": "💤", "ごはん": "🍚", "自由時間": "☕",
+    "送る": "🚲", "迎える": "🏃", "出勤": "🏢", "帰宅": "🏠", "仕事": "💼", "リモート": "💻"
   };
   
   function renderBlock(taskStr, prevStr, nextStr, role, span) {
@@ -454,7 +494,7 @@
     if (!isFirst) contClass += " cont-top";
     if (!isLast) contClass += " cont-bottom";
 
-    const babyTasksArr = ["母乳", "ミルク", "離乳食", "おむつ", "お風呂"];
+    const babyTasksArr = ["母乳", "ミルク", "離乳食", "おむつ", "お風呂_baby"];
     let tasks = taskStr.split(',');
 
     // タスクごとに個別のブロックを生成（色はタスクごとに判定）
@@ -469,7 +509,8 @@
     if (isFirst) {
       let innerHtml = tasks.map(t => {
         let icon = taskIcons[t] ? `<span class="icon-only">${taskIcons[t]}</span>` : '';
-        let text = `<span class="text-badge">${t}</span>`;
+        let displayLabel = t === "お風呂_baby" || t === "お風呂_parent" ? "お風呂" : t;
+        let text = `<span class="text-badge">${displayLabel}</span>`;
         return `
           <div style="flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap;">
             ${icon}${text}
@@ -488,10 +529,27 @@
     `;
   }
 
+  // ---- メモ制御ロジック ----
+  const memoEl = document.getElementById('pattern-memo');
+  let memoTimeout;
+  memoEl.addEventListener('input', (e) => {
+    if (!currentPatternId) return;
+    clearTimeout(memoTimeout);
+    let val = e.target.value;
+    memoTimeout = setTimeout(() => {
+      update(ref(db, `patterns/${currentPatternId}`), { memo: val });
+    }, 1000);
+  });
+  memoEl.addEventListener('change', (e) => {
+    if (!currentPatternId) return;
+    clearTimeout(memoTimeout);
+    update(ref(db, `patterns/${currentPatternId}`), { memo: e.target.value });
+  });
+
   // ---- モーダル制御ロジック ----
   const taskGroups = {
-    "👶 赤ちゃんのお世話": ["母乳", "ミルク", "離乳食", "おむつ", "お風呂"],
-    "🧑 自分たちの予定": ["寝る", "ごはん", "お風呂", "自由時間"]
+    "👶 赤ちゃんのお世話": ["母乳", "ミルク", "離乳食", "おむつ", "お風呂_baby"],
+    "🧑 自分たちの予定": ["寝る", "ごはん", "お風呂_parent", "自由時間", "送る", "迎える", "出勤", "帰宅", "仕事", "リモート"]
   };
   const taskModal = document.getElementById('task-modal');
   const modalBody = document.getElementById('modal-body-container');
@@ -524,7 +582,8 @@
         let isSelected = currentTasks.includes(task);
         btn.className = `task-btn ${isSelected ? 'active ' + activeClass : ''}`;
         
-        let displayText = taskIcons[task] ? `${taskIcons[task]} ${task}` : task;
+        let displayLabel = task === "お風呂_baby" || task === "お風呂_parent" ? "お風呂" : task;
+        let displayText = taskIcons[task] ? `${taskIcons[task]} ${displayLabel}` : displayLabel;
         btn.innerHTML = displayText;
         
         btn.onclick = () => {
