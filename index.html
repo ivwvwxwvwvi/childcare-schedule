@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>育児タイムスケジュール</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap');
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background-color: #f7faf9;
+    color: #333;
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+    /* タップ時のハイライトを無効化 */
+    -webkit-tap-highlight-color: transparent; 
+  }
+  .app-container {
+    background: #fff;
+    width: 100%;
+    max-width: 412px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    overflow: hidden;
+    padding-bottom: 20px;
+  }
+  .header {
+    background: #fff;
+    padding: 12px;
+    text-align: center;
+    border-bottom: 2px solid #f0f0f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header h1 { font-size: 16px; color: #444; font-weight: 700; }
+  .header p { font-size: 11px; color: #666; background: #f0f4f2; padding: 4px 8px; border-radius: 8px; margin:0;}
+  
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th {
+    padding: 6px 0; font-size: 11px; color: #777;
+    border-bottom: 1px solid #eee; background: #fafafa; font-weight: 700;
+  }
+  td {
+    border-bottom: 1px solid #f2f2f2; border-right: 1px solid #fbfbfb;
+    height: 34px; padding: 2px; text-align: center; vertical-align: middle; font-size: 11px;
+    cursor: pointer; /* タップ可能であることを示す */
+  }
+  td:active { background-color: rgba(0,0,0,0.05); } /* タップ時のフィードバック */
+  td:last-child { border-right: none; }
+  
+  .col-time { width: 14%; font-weight: 700; color: #555; background: #fafafa;}
+  .col-milk { width: 11%; }
+  .col-mom { width: 26%; background-color: rgba(255, 240, 242, 0.4); }
+  .col-dad { width: 26%; background-color: rgba(235, 245, 255, 0.4); }
+  .col-env { width: 23%; }
+
+  .badge {
+    padding: 3px 1px; border-radius: 4px; font-size: 10px; font-weight: 700;
+    width: 94%; margin: 1px auto; display: inline-block; line-height: 1.1;
+  }
+  .badge-mom { background-color: #ffe3e8; color: #c2185b; border: 1px solid #ffccd5; }
+  .badge-dad { background-color: #e1f5fe; color: #0288d1; border: 1px solid #b3e5fc; }
+  .badge-sleep { background-color: #eceff1; color: #607d8b; border: 1px dashed #b0bec5; }
+  
+  .milk-icon {
+    display: inline-block; width: 14px; height: 14px;
+    background-color: #ffa000; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .env-dark {
+    background: repeating-linear-gradient(45deg, #37474f, #37474f 6px, #263238 6px, #263238 12px);
+    color: #fff; font-size: 10px; font-weight: 700; border-radius: 4px;
+    padding: 4px 0; margin: 1px;
+  }
+
+  .milestone-container { position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+  .milestone {
+    position: absolute; left: -2px; background: #ff9800; color: #fff;
+    font-size: 8px; padding: 1px 3px; border-radius: 3px; font-weight: 700;
+    transform: scale(0.9); z-index: 10;
+  }
+  .border-quarter { border-bottom: 2px dashed #b0bec5 !important; }
+
+  /* モーダル (編集画面) のスタイル */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: flex-end;
+    z-index: 100;
+  }
+  .modal-content {
+    background: #fff; width: 100%; max-width: 412px; border-radius: 16px 16px 0 0;
+    padding: 20px; text-align: center; box-shadow: 0 -4px 16px rgba(0,0,0,0.1);
+    animation: slideUp 0.2s ease-out;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .modal-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: #555; }
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .task-btn {
+    padding: 12px 8px; border: none; border-radius: 8px; font-size: 12px; font-weight: 700;
+    font-family: inherit; cursor: pointer; color: #333;
+  }
+  .task-btn.mom-btn { background-color: #ffe3e8; color: #c2185b; }
+  .task-btn.dad-btn { background-color: #e1f5fe; color: #0288d1; }
+  .task-btn.clear-btn { background-color: #f5f5f5; color: #999; }
+  .cancel-btn {
+    width: 100%; padding: 12px; border: none; border-radius: 8px;
+    background: #333; color: #fff; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="app-container">
+  <div class="header">
+    <h1>育児スケジュール</h1>
+    <p id="status-text">🔴 接続中...</p>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th class="col-time">時間</th>
+        <th class="col-milk">授乳</th>
+        <th class="col-mom">ママ</th>
+        <th class="col-dad">パパ</th>
+        <th class="col-env">環境</th>
+      </tr>
+    </thead>
+    <tbody id="schedule-body">
+      <!-- JavaScriptで動的に生成されます -->
+    </tbody>
+  </table>
+</div>
+
+<!-- タスク選択モーダル -->
+<div class="modal-overlay" id="task-modal">
+  <div class="modal-content">
+    <div class="modal-title" id="modal-title">タスクを選択</div>
+    <div class="btn-grid" id="modal-btn-grid">
+      <!-- ボタンが動的に入ります -->
+    </div>
+    <button class="cancel-btn" onclick="closeModal()">キャンセル</button>
+  </div>
+</div>
+
+<!-- Firebase SDK (Modular) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  // 提供されたFirebase設定
+  const firebaseConfig = {
+    apiKey: "AIzaSyB_LrMdc1wNheY3cgU1jocn9FwrMAFwpLw",
+    authDomain: "childcare-schedule.firebaseapp.com",
+    databaseURL: "https://childcare-schedule-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "childcare-schedule",
+    storageBucket: "childcare-schedule.firebasestorage.app",
+    messagingSenderId: "941657534679",
+    appId: "1:941657534679:web:18c7fadb28320224a94092"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const scheduleRef = ref(db, 'schedule');
+
+  // 初期デフォルトデータ (0〜4ヶ月)
+  const defaultSchedule = {
+    "00": { milk: false, mom: "", dad: "", env: "暗くする" },
+    "01": { milk: true, mom: "", dad: "おむつ", env: "暗くする" },
+    "02": { milk: false, mom: "", dad: "", env: "暗くする" },
+    "03": { milk: false, mom: "", dad: "", env: "暗くする" },
+    "04": { milk: true, mom: "", dad: "おむつ", env: "暗くする" },
+    "05": { milk: false, mom: "", dad: "", env: "暗くする" },
+    "06": { milk: false, mom: "", dad: "", env: "" },
+    "07": { milk: true, mom: "朝食", dad: "おむつ,風呂", env: "" },
+    "08": { milk: false, mom: "", dad: "", env: "" },
+    "09": { milk: false, mom: "", dad: "", env: "" },
+    "10": { milk: true, mom: "おむつ", dad: "寝る", env: "" },
+    "11": { milk: false, mom: "", dad: "寝る", env: "" },
+    "12": { milk: false, mom: "昼食", dad: "寝る", env: "" },
+    "13": { milk: true, mom: "おむつ", dad: "寝る", env: "" },
+    "14": { milk: false, mom: "", dad: "寝る", env: "" },
+    "15": { milk: false, mom: "", dad: "寝る", env: "" },
+    "16": { milk: true, mom: "おむつ", dad: "", env: "" },
+    "17": { milk: false, mom: "夕食", dad: "", env: "" },
+    "18": { milk: false, mom: "", dad: "風呂入る", env: "" },
+    "19": { milk: true, mom: "お風呂", dad: "おむつ", env: "暗くする" },
+    "20": { milk: false, mom: "", dad: "", env: "暗くする" },
+    "21": { milk: false, mom: "", dad: "", env: "暗くする" },
+    "22": { milk: true, mom: "", dad: "おむつ", env: "暗くする" },
+    "23": { milk: false, mom: "", dad: "", env: "暗くする" }
+  };
+
+  const tbody = document.getElementById('schedule-body');
+  const statusText = document.getElementById('status-text');
+  let currentData = {};
+
+  // リアルタイム同期のリスナー
+  onValue(scheduleRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      // データが無い場合は初期データをセット
+      set(scheduleRef, defaultSchedule);
+    } else {
+      currentData = snapshot.val();
+      renderTable(currentData);
+      statusText.innerHTML = "🟢 同期済み";
+      setTimeout(() => { statusText.style.background = "transparent"; statusText.innerHTML = ""; }, 2000);
+    }
+  });
+
+  // テーブル描画関数
+  function renderTable(data) {
+    tbody.innerHTML = "";
+    for (let h = 0; h < 24; h++) {
+      let hourStr = h.toString().padStart(2, '0');
+      let rowData = data[hourStr] || { milk: false, mom: "", dad: "", env: "" };
+      let tr = document.createElement('tr');
+      
+      // 区切り線
+      if ([5, 11, 17, 23].includes(h)) tr.className = "border-quarter";
+
+      // マイルストーン
+      let milestone = "";
+      if (h === 6) milestone = '<span class="milestone">起床</span>';
+      if (h === 18) milestone = '<span class="milestone">風呂</span>';
+      if (h === 19) milestone = '<span class="milestone">就寝</span>';
+
+      // HTML組み立て
+      tr.innerHTML = `
+        <td class="col-time"><div class="milestone-container">${milestone}${hourStr}:00</div></td>
+        <td class="col-milk" onclick="toggleMilk('${hourStr}', ${rowData.milk})">
+          ${rowData.milk ? '<span class="milk-icon"></span>' : ''}
+        </td>
+        <td class="col-mom" onclick="openModal('${hourStr}', 'mom')">
+          ${renderBadges(rowData.mom, 'mom')}
+        </td>
+        <td class="col-dad" onclick="openModal('${hourStr}', 'dad')">
+          ${renderBadges(rowData.dad, 'dad')}
+        </td>
+        <td class="col-env" onclick="toggleEnv('${hourStr}', '${rowData.env}')">
+          ${rowData.env === '暗くする' ? '<div class="env-dark">暗くする</div>' : ''}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  // バッジ生成ヘルパー
+  function renderBadges(taskStr, role) {
+    if (!taskStr) return "";
+    let tasks = taskStr.split(',');
+    return tasks.map(t => {
+      let badgeClass = role === 'mom' ? 'badge-mom' : 'badge-dad';
+      if (t === '寝る' || t === 'パパ寝る') badgeClass = 'badge-sleep';
+      return `<div class="badge ${badgeClass}">${t}</div>`;
+    }).join('');
+  }
+
+  // データ更新処理（グローバル関数として登録）
+  window.toggleMilk = function(hour, currentVal) {
+    update(ref(db, `schedule/${hour}`), { milk: !currentVal });
+  };
+  window.toggleEnv = function(hour, currentVal) {
+    let newVal = currentVal === "暗くする" ? "" : "暗くする";
+    update(ref(db, `schedule/${hour}`), { env: newVal });
+  };
+  window.updateTask = function(hour, role, task) {
+    let updates = {};
+    updates[role] = task;
+    update(ref(db, `schedule/${hour}`), updates);
+    closeModal();
+  };
+
+  // モーダル制御
+  const taskOptions = ["おむつ", "ミルク", "ご飯", "お風呂", "寝る"];
+  const modal = document.getElementById('task-modal');
+  const modalBtnGrid = document.getElementById('modal-btn-grid');
+  const modalTitle = document.getElementById('modal-title');
+
+  window.openModal = function(hour, role) {
+    let roleName = role === 'mom' ? 'ママ' : 'パパ';
+    let btnClass = role === 'mom' ? 'mom-btn' : 'dad-btn';
+    modalTitle.innerText = `${hour}:00 の ${roleName}のタスク`;
+    
+    modalBtnGrid.innerHTML = "";
+    taskOptions.forEach(task => {
+      let btn = document.createElement('button');
+      btn.className = `task-btn ${btnClass}`;
+      btn.innerText = task;
+      btn.onclick = () => updateTask(hour, role, task);
+      modalBtnGrid.appendChild(btn);
+    });
+    
+    // クリアボタン
+    let clearBtn = document.createElement('button');
+    clearBtn.className = "task-btn clear-btn";
+    clearBtn.innerText = "✖ 空にする";
+    clearBtn.onclick = () => updateTask(hour, role, "");
+    modalBtnGrid.appendChild(clearBtn);
+
+    modal.style.display = "flex";
+  };
+
+  window.closeModal = function() {
+    modal.style.display = "none";
+  };
+</script>
+</body>
+</html>
