@@ -12,15 +12,63 @@
     font-family: 'Zen Maru Gothic', sans-serif;
     background-color: #f7faf9;
     color: #333;
-    padding: 8px;
+    padding: 16px 8px;
     display: flex;
     justify-content: center;
+    align-items: flex-start;
     -webkit-tap-highlight-color: transparent; 
   }
+  .layout-container {
+    display: flex;
+    width: 100%;
+    max-width: 700px;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .sidebar {
+    width: 220px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sidebar-header {
+    font-size: 14px; font-weight: 700; color: #444; margin-bottom: 12px;
+  }
+  .pattern-list { list-style: none; padding: 0; margin-bottom: 16px; }
+  .pattern-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 8px; border-radius: 6px; cursor: pointer; margin-bottom: 4px;
+    font-size: 13px; font-weight: 700; color: #555;
+    transition: background 0.2s;
+  }
+  .pattern-item:hover { background: #f5f5f5; }
+  .pattern-item.active { background: #e1f5fe; color: #0288d1; }
+  .pattern-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .edit-name-btn {
+    background: none; border: none; cursor: pointer; color: #aaa;
+    font-size: 12px; padding: 4px;
+  }
+  .add-pattern-btn {
+    background: #f0f0f0; border: none; padding: 10px; border-radius: 6px;
+    font-weight: 700; cursor: pointer; color: #555; width: 100%;
+    transition: background 0.2s;
+  }
+  .add-pattern-btn:hover { background: #e0e0e0; }
+
+  @media (max-width: 600px) {
+    .layout-container { flex-direction: column; }
+    .sidebar { width: 100%; }
+  }
+
   .app-container {
     background: #fff;
     width: 100%;
     max-width: 412px;
+    flex: 1;
     border-radius: 12px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.06);
     overflow: hidden;
@@ -51,38 +99,55 @@
     height: 36px; padding: 0; /* paddingを0にしてブロックを画面いっぱいに */
     text-align: center; vertical-align: middle; font-size: 11px; cursor: pointer;
   }
+  td.no-border { border-bottom: none !important; }
   td:last-child { border-right: none; }
   
   .col-time { width: 18%; font-weight: 700; color: #555; background: #fafafa; position: relative;}
-  .col-mom { width: 41%; }
-  .col-dad { width: 41%; }
+  .col-mom { width: 41%; position: relative; }
+  .col-dad { width: 41%; position: relative; }
+
+  .merged-text {
+    position: absolute;
+    top: 0; left: 0; width: 100%;
+    display: flex; flex-direction: row; align-items: center; justify-content: center;
+    padding: 0 2px; gap: 2px;
+    pointer-events: none;
+    z-index: 10;
+  }
 
   /* 暗室モード（行全体） */
   .dark-row td { background-color: #2c3e50; color: #a9b9c9; border-bottom: 1px solid #34495e;}
+  .dark-row td.no-border { border-bottom: none !important; }
   .dark-row td.col-time { background-color: #263645; color: #95a5a6; }
 
   /* タスクブロックのデザイン */
   .task-container {
-    width: 100%; height: 100%; display: flex; flex-direction: column; 
-    align-items: center; justify-content: center; padding: 2px;
+    width: 100%; height: 100%; display: flex; flex-direction: row; 
+    align-items: center; justify-content: center; padding: 2px; gap: 2px;
   }
+  .task-container.cont-top { padding-top: 0; }
+  .task-container.cont-bottom { padding-bottom: 0; }
+  
   .task-block {
-    width: 96%; height: 100%; display: flex; align-items: center; justify-content: center;
+    flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; justify-content: center;
     border-radius: 6px; font-size: 11px; font-weight: 700; gap: 4px; flex-wrap: wrap;
   }
   
   /* 連続ブロックの接合部（角丸と余白を消して繋げる） */
-  .cont-top { border-top-left-radius: 0; border-top-right-radius: 0; margin-top: -4px; padding-top: 4px; }
-  .cont-bottom { border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: -4px; padding-bottom: 4px; }
+  .task-block.cont-top { border-top-left-radius: 0; border-top-right-radius: 0; }
+  .task-block.cont-bottom { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 
   /* ママ・パパ・睡眠の色分け */
   .bg-mom { background-color: #ffe3e8; color: #c2185b; }
   .bg-dad { background-color: #e1f5fe; color: #0288d1; }
   .bg-sleep { background-color: #eceff1; color: #607d8b; }
+  .bg-baby { background-color: #fff3e0; color: #e65100; }
+  
   /* 暗室モード中の色調整 */
   .dark-row .bg-mom { background-color: #883a4d; color: #ffccd5; }
   .dark-row .bg-dad { background-color: #2b5f7e; color: #b3e5fc; }
   .dark-row .bg-sleep { background-color: #3f5059; color: #b0bec5; }
+  .dark-row .bg-baby { background-color: #8c5a2b; color: #ffe0b2; }
 
   .icon-only { font-size: 14px; line-height: 1; }
   .text-badge { padding: 0 4px; }
@@ -102,6 +167,8 @@
   .modal-title { font-size: 14px; font-weight: 700; margin-bottom: 16px; color: #555; }
   
   /* タスク選択モーダル */
+  .group-title { font-size: 13px; font-weight: 700; color: #666; margin: 16px 0 8px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+  .group-title:first-child { margin-top: 0; }
   .btn-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px; }
   .task-btn {
     padding: 12px 4px; border: 2px solid #eee; border-radius: 8px; font-size: 12px; 
@@ -119,11 +186,22 @@
 </style>
 </head>
 <body>
-<div class="app-container">
-  <div class="header">
-    <div class="header-left">
-      <h1>育児スケジュール</h1>
-      <p id="status-text">🔴 接続中...</p>
+<div class="layout-container">
+  <!-- サイドバー -->
+  <div class="sidebar">
+    <div class="sidebar-header">📅 パターン一覧</div>
+    <ul class="pattern-list" id="pattern-list">
+      <!-- JSで生成 -->
+    </ul>
+    <button class="add-pattern-btn" onclick="addPattern()">+ 新規追加</button>
+  </div>
+
+  <!-- メイン画面 -->
+  <div class="app-container">
+    <div class="header">
+      <div class="header-left">
+        <h1 id="app-title">育児スケジュール</h1>
+        <p id="status-text">🔴 接続中...</p>
     </div>
     <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
   </div>
@@ -139,13 +217,14 @@
       <!-- JSで生成 -->
     </tbody>
   </table>
+  </div>
 </div>
 
 <!-- タスク選択モーダル -->
 <div class="modal-overlay" id="task-modal">
   <div class="modal-content">
     <div class="modal-title" id="modal-title">タスクを選択 (複数可)</div>
-    <div class="btn-grid" id="modal-btn-grid"></div>
+    <div id="modal-body-container" style="text-align: left; margin-bottom: 16px;"></div>
     <div class="action-btns">
       <button class="clear-btn" onclick="clearTask()">空にする</button>
       <button class="close-btn" onclick="closeModal()">閉じる</button>
@@ -189,39 +268,117 @@
     "00": { mom: "", dad: "寝る" }, "01": { mom: "母乳,おむつ", dad: "寝る" },
     "02": { mom: "", dad: "寝る" }, "03": { mom: "", dad: "寝る" },
     "04": { mom: "母乳,おむつ", dad: "寝る" }, "05": { mom: "", dad: "寝る" },
-    "06": { mom: "", dad: "起床" }, "07": { mom: "朝食", dad: "おむつ" },
+    "06": { mom: "", dad: "起床" }, "07": { mom: "ごはん", dad: "おむつ" },
     "08": { mom: "", dad: "" }, "09": { mom: "", dad: "" },
     "10": { mom: "おむつ", dad: "寝る" }, "11": { mom: "", dad: "寝る" },
-    "12": { mom: "昼食", dad: "寝る" }, "13": { mom: "離乳食,おむつ", dad: "寝る" },
+    "12": { mom: "ごはん", dad: "寝る" }, "13": { mom: "離乳食,おむつ", dad: "寝る" },
     "14": { mom: "", dad: "寝る" }, "15": { mom: "", dad: "寝る" },
-    "16": { mom: "ミルク,おむつ", dad: "" }, "17": { mom: "夕食", dad: "" },
+    "16": { mom: "ミルク,おむつ", dad: "" }, "17": { mom: "ごはん", dad: "" },
     "18": { mom: "", dad: "お風呂" }, "19": { mom: "母乳", dad: "おむつ" },
     "20": { mom: "", dad: "" }, "21": { mom: "寝る", dad: "" },
     "22": { mom: "寝る", dad: "ミルク,おむつ" }, "23": { mom: "寝る", dad: "" }
   };
   const defaultSettings = { darkStart: 19, darkEnd: 6 };
 
+  let patternsData = {};
+  let currentPatternId = null;
   let currentData = {};
   let currentSettings = {};
 
   const tbody = document.getElementById('schedule-body');
   const statusText = document.getElementById('status-text');
+  const patternList = document.getElementById('pattern-list');
+  const appTitle = document.getElementById('app-title');
 
   // データ同期
   onValue(ref(db, '/'), (snapshot) => {
-    let data = snapshot.val();
-    if (!data || !data.schedule) {
-      set(ref(db, 'schedule'), defaultSchedule);
-      set(ref(db, 'settings'), defaultSettings);
-      return;
+    let data = snapshot.val() || {};
+    
+    // データ構造のマイグレーション・初期化
+    if (!data.patterns) {
+      const defaultId = 'pattern_' + Date.now();
+      const initialPatterns = {
+        [defaultId]: {
+          name: "基本スケジュール",
+          schedule: data.schedule || defaultSchedule
+        }
+      };
+      // 古い/scheduleデータがあれば移行し、patternsをセット
+      set(ref(db, 'patterns'), initialPatterns);
+      if (data.settings) set(ref(db, 'settings'), data.settings);
+      else set(ref(db, 'settings'), defaultSettings);
+      return; 
     }
-    currentData = data.schedule;
+
+    patternsData = data.patterns;
     currentSettings = data.settings || defaultSettings;
+    
+    // ごはんタスクの表記揺れを「ごはん」に統一するマイグレーション（実行中メモリ上のみ書き換え、次回保存時に反映）
+    Object.keys(patternsData).forEach(pId => {
+      let sched = patternsData[pId].schedule;
+      if (sched) {
+        Object.keys(sched).forEach(h => {
+          if (sched[h].mom) sched[h].mom = sched[h].mom.replace(/朝食|昼食|夕食|夜ご飯/g, "ごはん");
+          if (sched[h].dad) sched[h].dad = sched[h].dad.replace(/朝食|昼食|夕食|夜ご飯/g, "ごはん");
+        });
+      }
+    });
+
+    // 選択中のパターンがないか、削除された場合は最初を選択
+    if (!currentPatternId || !patternsData[currentPatternId]) {
+      currentPatternId = Object.keys(patternsData)[0]; 
+    }
+
+    currentData = patternsData[currentPatternId].schedule || defaultSchedule;
+    appTitle.innerText = patternsData[currentPatternId].name;
+    
+    renderSidebar();
     renderTable();
     
     statusText.innerHTML = "🟢 同期済み";
     setTimeout(() => { statusText.style.background = "transparent"; statusText.innerHTML = ""; }, 2000);
   });
+
+  window.renderSidebar = function() {
+    patternList.innerHTML = "";
+    Object.keys(patternsData).forEach(id => {
+      const pattern = patternsData[id];
+      const li = document.createElement('li');
+      li.className = `pattern-item ${id === currentPatternId ? 'active' : ''}`;
+      li.innerHTML = `
+        <span class="pattern-name" onclick="selectPattern('${id}')">${pattern.name}</span>
+        <button class="edit-name-btn" onclick="editPatternName('${id}')">✏️</button>
+      `;
+      patternList.appendChild(li);
+    });
+  }
+
+  window.selectPattern = function(id) {
+    currentPatternId = id;
+    currentData = patternsData[id].schedule || defaultSchedule;
+    appTitle.innerText = patternsData[id].name;
+    renderSidebar();
+    renderTable();
+  };
+
+  window.editPatternName = function(id) {
+    const newName = prompt("スケジュールの名前を入力してください", patternsData[id].name);
+    if (newName && newName.trim() !== "") {
+      update(ref(db, `patterns/${id}`), { name: newName.trim() });
+    }
+  };
+
+  window.addPattern = function() {
+    const newName = prompt("新しいスケジュールの名前を入力してください", "新スケジュール");
+    if (newName && newName.trim() !== "") {
+      const newId = 'pattern_' + Date.now();
+      update(ref(db, `patterns/${newId}`), {
+        name: newName.trim(),
+        schedule: defaultSchedule
+      });
+      currentPatternId = newId;
+    }
+  };
 
   // 暗室判定ロジック
   function isDarkHour(h) {
@@ -248,13 +405,33 @@
       let prevDad = h > 0 ? (currentData[(h-1).toString().padStart(2, '0')]?.dad || "") : "";
       let nextDad = h < 23 ? (currentData[(h+1).toString().padStart(2, '0')]?.dad || "") : "";
 
+      let momNoBorder = (rowData.mom !== "" && rowData.mom === nextMom) ? "no-border" : "";
+      let dadNoBorder = (rowData.dad !== "" && rowData.dad === nextDad) ? "no-border" : "";
+
+      // 結合スパンの計算（最初のブロックの場合のみ、何時間連続するか数える）
+      let momSpan = 1;
+      if (rowData.mom !== "" && rowData.mom !== prevMom) {
+        for(let nextH = h + 1; nextH < 24; nextH++) {
+          if ((currentData[nextH.toString().padStart(2, '0')]?.mom || "") === rowData.mom) momSpan++;
+          else break;
+        }
+      }
+
+      let dadSpan = 1;
+      if (rowData.dad !== "" && rowData.dad !== prevDad) {
+        for(let nextH = h + 1; nextH < 24; nextH++) {
+          if ((currentData[nextH.toString().padStart(2, '0')]?.dad || "") === rowData.dad) dadSpan++;
+          else break;
+        }
+      }
+
       tr.innerHTML = `
         <td class="col-time">${hStr}:00</td>
-        <td class="col-mom" onclick="openModal('${hStr}', 'mom')">
-          <div class="task-container">${renderBlock(rowData.mom, prevMom, nextMom, 'mom')}</div>
+        <td class="col-mom ${momNoBorder}" onclick="openModal('${hStr}', 'mom')">
+          ${renderBlock(rowData.mom, prevMom, nextMom, 'mom', momSpan)}
         </td>
-        <td class="col-dad" onclick="openModal('${hStr}', 'dad')">
-          <div class="task-container">${renderBlock(rowData.dad, prevDad, nextDad, 'dad')}</div>
+        <td class="col-dad ${dadNoBorder}" onclick="openModal('${hStr}', 'dad')">
+          ${renderBlock(rowData.dad, prevDad, nextDad, 'dad', dadSpan)}
         </td>
       `;
       tbody.appendChild(tr);
@@ -262,33 +439,62 @@
   }
 
   // ブロックのHTML生成（アイコン化と結合判定）
-  const taskIcons = { "母乳": "🤱", "ミルク": "🍼", "離乳食": "🥣" };
+  const taskIcons = { 
+    "母乳": "🤱", "ミルク": "🍼", "離乳食": "🥣", "おむつ": "🚼", "お風呂": "🛁",
+    "寝る": "💤", "ごはん": "🍚", "自由時間": "☕"
+  };
   
-  function renderBlock(taskStr, prevStr, nextStr, role) {
+  function renderBlock(taskStr, prevStr, nextStr, role, span) {
     if (!taskStr) return "";
-    
-    // 背景色の決定
-    let bgClass = role === 'mom' ? 'bg-mom' : 'bg-dad';
-    if (taskStr.includes('寝る')) bgClass = 'bg-sleep'; // 寝るが含まれていれば睡眠色優先
 
-    // 連続判定（CSSクラスの付与）
+    let isFirst = taskStr !== prevStr;
+    let isLast = taskStr !== nextStr;
+
     let contClass = "";
-    if (taskStr === prevStr) contClass += " cont-top";
-    if (taskStr === nextStr) contClass += " cont-bottom";
+    if (!isFirst) contClass += " cont-top";
+    if (!isLast) contClass += " cont-bottom";
 
-    // タスクを文字列/アイコンに変換
-    let contentHtml = taskStr.split(',').map(t => {
-      if (taskIcons[t]) return `<span class="icon-only">${taskIcons[t]}</span>`;
-      return `<span class="text-badge">${t}</span>`;
+    const babyTasksArr = ["母乳", "ミルク", "離乳食", "おむつ", "お風呂"];
+    let tasks = taskStr.split(',');
+
+    // タスクごとに個別のブロックを生成（色はタスクごとに判定）
+    let bgBlocksHtml = tasks.map(t => {
+      let bgClass = role === 'mom' ? 'bg-mom' : 'bg-dad';
+      if (babyTasksArr.includes(t)) bgClass = 'bg-baby';
+      
+      return `<div class="task-block ${bgClass} ${contClass}"></div>`;
     }).join('');
 
-    return `<div class="task-block ${bgClass} ${contClass}">${contentHtml}</div>`;
+    let contentHtml = "";
+    if (isFirst) {
+      let innerHtml = tasks.map(t => {
+        let icon = taskIcons[t] ? `<span class="icon-only">${taskIcons[t]}</span>` : '';
+        let text = `<span class="text-badge">${t}</span>`;
+        return `
+          <div style="flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap;">
+            ${icon}${text}
+          </div>
+        `;
+      }).join('');
+      // 1枠の高さ36px × 連続する時間数 でコンテナ高さを設定し、その中で上下左右中央揃えにする
+      contentHtml = `<div class="merged-text" style="height: ${span * 36}px;">${innerHtml}</div>`;
+    }
+
+    return `
+      <div class="task-container ${contClass}">
+        ${bgBlocksHtml}
+        ${contentHtml}
+      </div>
+    `;
   }
 
   // ---- モーダル制御ロジック ----
-  const taskOptions = ["母乳", "ミルク", "離乳食", "おむつ", "お風呂", "寝る"];
+  const taskGroups = {
+    "👶 赤ちゃんのお世話": ["母乳", "ミルク", "離乳食", "おむつ", "お風呂"],
+    "🧑 自分たちの予定": ["寝る", "ごはん", "お風呂", "自由時間"]
+  };
   const taskModal = document.getElementById('task-modal');
-  const btnGrid = document.getElementById('modal-btn-grid');
+  const modalBody = document.getElementById('modal-body-container');
   let currentEditHour = "";
   let currentEditRole = "";
 
@@ -302,28 +508,38 @@
     let currentTasks = (currentData[hour]?.[role] || "").split(',').filter(Boolean);
     let activeClass = role === 'mom' ? 'mom-active' : 'dad-active';
 
-    btnGrid.innerHTML = "";
-    taskOptions.forEach(task => {
-      let btn = document.createElement('button');
-      let isSelected = currentTasks.includes(task);
-      btn.className = `task-btn ${isSelected ? 'active ' + activeClass : ''}`;
+    modalBody.innerHTML = "";
+    
+    for (const [groupName, tasks] of Object.entries(taskGroups)) {
+      let groupTitle = document.createElement('div');
+      groupTitle.className = "group-title";
+      groupTitle.innerText = groupName;
+      modalBody.appendChild(groupTitle);
       
-      // アイコンがあれば表示
-      let displayText = taskIcons[task] ? `${taskIcons[task]} ${task}` : task;
-      btn.innerHTML = displayText;
+      let grid = document.createElement('div');
+      grid.className = "btn-grid";
       
-      // クリックでタスクをトグル（追加/削除）して即時保存
-      btn.onclick = () => {
-        if (isSelected) {
-          currentTasks = currentTasks.filter(t => t !== task); // 削除
-        } else {
-          currentTasks.push(task); // 追加
-        }
-        updateTask(currentTasks.join(','));
-        openModal(hour, role); // モーダルを再描画してハイライトを更新
-      };
-      btnGrid.appendChild(btn);
-    });
+      tasks.forEach(task => {
+        let btn = document.createElement('button');
+        let isSelected = currentTasks.includes(task);
+        btn.className = `task-btn ${isSelected ? 'active ' + activeClass : ''}`;
+        
+        let displayText = taskIcons[task] ? `${taskIcons[task]} ${task}` : task;
+        btn.innerHTML = displayText;
+        
+        btn.onclick = () => {
+          if (isSelected) {
+            currentTasks = currentTasks.filter(t => t !== task);
+          } else {
+            currentTasks.push(task);
+          }
+          updateTask(currentTasks.join(','));
+          openModal(hour, role); 
+        };
+        grid.appendChild(btn);
+      });
+      modalBody.appendChild(grid);
+    }
     
     taskModal.style.display = "flex";
   };
@@ -331,7 +547,7 @@
   window.updateTask = function(taskStr) {
     let updates = {};
     updates[currentEditRole] = taskStr;
-    update(ref(db, `schedule/${currentEditHour}`), updates);
+    update(ref(db, `patterns/${currentPatternId}/schedule/${currentEditHour}`), updates);
   };
 
   window.clearTask = function() {
