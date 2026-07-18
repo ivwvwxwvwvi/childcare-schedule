@@ -125,9 +125,9 @@
   }
 
   /* 暗室モード（行全体） */
-  .dark-row td { background-color: #757575; color: #f5f5f5; border-bottom: 1px solid #9e9e9e;}
+  .dark-row td { background-color: #e4e4e4; color: #333; border-bottom: 1px solid #ccc;}
   .dark-row td.no-border { border-bottom: none !important; }
-  .dark-row td.col-time { background-color: #616161; color: #e0e0e0; }
+  .dark-row td.col-time { background-color: #d8d8d8; color: #444; }
 
   /* タスクブロックのデザイン */
   .task-container {
@@ -152,12 +152,6 @@
   .bg-sleep { background-color: #eceff1; color: #607d8b; }
   .bg-baby { background-color: #fff3e0; color: #e65100; }
   
-  /* 暗室モード中の色調整 */
-  .dark-row .bg-mom { background-color: #b97486; color: #fff; }
-  .dark-row .bg-dad { background-color: #6592b0; color: #fff; }
-  .dark-row .bg-sleep { background-color: #888888; color: #fff; }
-  .dark-row .bg-baby { background-color: #c48c5a; color: #fff; }
-
   .icon-only { font-size: 14px; line-height: 1; }
   .text-badge { padding: 0 4px; }
 
@@ -481,7 +475,7 @@
   const taskIcons = { 
     "母乳": "🤱", "ミルク": "🍼", "離乳食": "🥣", "おむつ": "🚼", "お風呂_baby": "🛁", "お風呂_parent": "🛀",
     "寝る": "💤", "ごはん": "🍚", "自由時間": "☕",
-    "送る": "🚲", "迎える": "🏃", "出勤": "🏢", "帰宅": "🏠", "仕事": "💼", "リモート": "💻"
+    "送る": "🚲", "迎える": "🏃", "出勤": "🚶", "帰宅": "🚶", "仕事": "🏢", "リモート": "💻"
   };
   
   function renderBlock(taskStr, prevStr, nextStr, role, span) {
