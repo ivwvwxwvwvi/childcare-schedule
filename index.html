@@ -538,19 +538,60 @@
     rangeMode = false;
     let isScrolling = false;
     let startY = e.clientY;
+    let edgeScrollSpeed = 0;
+    let edgeScrollTimer = null;
+    let lastClientX = 0;
+    let lastClientY = 0;
 
     document.querySelectorAll('.range-selected').forEach(el => el.classList.remove('range-selected'));
+
+    const startEdgeScroll = () => {
+      if (edgeScrollTimer) return;
+      const scrollLoop = () => {
+        window.scrollBy(0, edgeScrollSpeed);
+        const el = document.elementFromPoint(lastClientX, lastClientY);
+        const hoverTd = el ? el.closest('td[data-role]') : null;
+        if (hoverTd && hoverTd.getAttribute('data-role') === rangeRole) {
+          rangeEndHour = parseInt(hoverTd.getAttribute('data-index'));
+          updateRangeHighlight();
+        }
+        if (edgeScrollSpeed !== 0) {
+          edgeScrollTimer = requestAnimationFrame(scrollLoop);
+        } else {
+          edgeScrollTimer = null;
+        }
+      };
+      edgeScrollTimer = requestAnimationFrame(scrollLoop);
+    };
+
+    const stopEdgeScroll = () => {
+      if (edgeScrollTimer) {
+        cancelAnimationFrame(edgeScrollTimer);
+        edgeScrollTimer = null;
+      }
+    };
+
+    const preventTouchScroll = (ev) => {
+      if (rangeMode && ev.cancelable) {
+        ev.preventDefault();
+      }
+    };
+    document.addEventListener('touchmove', preventTouchScroll, { passive: false });
 
     rangeSelectTimer = setTimeout(() => {
       if (!isScrolling) {
         rangeMode = true;
         updateRangeHighlight();
         if (navigator.vibrate) navigator.vibrate(50);
+        document.body.style.userSelect = 'none';
       }
     }, 400);
 
     const onPointerMove = (ev) => {
       let deltaY = ev.clientY - startY;
+      lastClientX = ev.clientX;
+      lastClientY = ev.clientY;
+
       if (!rangeMode) {
         if (Math.abs(deltaY) > 10) {
           isScrolling = true;
@@ -559,7 +600,7 @@
         return;
       }
       
-      ev.preventDefault(); // 範囲選択中はスクロールを防止
+      if (ev.cancelable) ev.preventDefault(); // 範囲選択中はスクロールを防止
       
       const el = document.elementFromPoint(ev.clientX, ev.clientY);
       const hoverTd = el ? el.closest('td[data-role]') : null;
@@ -567,12 +608,30 @@
         rangeEndHour = parseInt(hoverTd.getAttribute('data-index'));
         updateRangeHighlight();
       }
+
+      let edgeThreshold = 60;
+      if (ev.clientY < edgeThreshold) {
+        edgeScrollSpeed = -15;
+      } else if (ev.clientY > window.innerHeight - edgeThreshold) {
+        edgeScrollSpeed = 15;
+      } else {
+        edgeScrollSpeed = 0;
+      }
+
+      if (edgeScrollSpeed !== 0) {
+        startEdgeScroll();
+      } else {
+        stopEdgeScroll();
+      }
     };
 
     const onPointerUp = (ev) => {
       clearTimeout(rangeSelectTimer);
+      stopEdgeScroll();
+      document.body.style.userSelect = '';
       document.removeEventListener('pointermove', onPointerMove);
       document.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('touchmove', preventTouchScroll);
       
       if (isScrolling) return;
 
