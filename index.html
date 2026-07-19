@@ -1194,21 +1194,22 @@
     let roleName = role === 'mom' ? 'ママ' : (role === 'dad' ? 'パパ' : 'とうた');
     
     let firstHour = currentEditHours[0];
-    let lastHour = currentEditHours[currentEditHours.length-1];
+    let lastHourStart = currentEditHours[currentEditHours.length-1];
     
     const allTimeStrs = [];
-    for(let i=0; i<48; i++){
+    for(let i=0; i<=48; i++){
       let h = Math.floor(i/2).toString().padStart(2, '0');
       let m = i%2===0 ? "00" : "30";
+      if (i === 48) { h = "24"; m = "00"; }
       allTimeStrs.push(`${h}:${m}`);
     }
+    
+    let lastHourEnd = allTimeStrs[allTimeStrs.indexOf(lastHourStart) + 1];
 
-    let startOptions = allTimeStrs.map(t => `<option value="${t}" ${t===firstHour?'selected':''}>${t}</option>`).join('');
-    let endOptions = allTimeStrs.map(t => `<option value="${t}" ${t===lastHour?'selected':''}>${t}</option>`).join('');
+    let startOptions = allTimeStrs.slice(0, 48).map(t => `<option value="${t}" ${t===firstHour?'selected':''}>${t}</option>`).join('');
+    let endOptions = allTimeStrs.slice(1).map(t => `<option value="${t}" ${t===lastHourEnd?'selected':''}>${t}</option>`).join('');
 
-    let titleStr = currentEditHours.length > 1 
-      ? `${currentEditHours[0]} - ${currentEditHours[currentEditHours.length-1]} ${roleName}のタスク`
-      : `${currentEditHours[0]} ${roleName}のタスク`;
+    let titleStr = `${firstHour} - ${lastHourEnd} ${roleName}のタスク`;
       
     document.getElementById('modal-title').innerText = titleStr;
 
@@ -1285,22 +1286,23 @@
     let endStr = document.getElementById('modal-end-time').value;
     
     const allTimeStrs = [];
-    for(let i=0; i<48; i++){
+    for(let i=0; i<=48; i++){
       let h = Math.floor(i/2).toString().padStart(2, '0');
       let m = i%2===0 ? "00" : "30";
+      if(i===48) { h="24"; m="00"; }
       allTimeStrs.push(`${h}:${m}`);
     }
     
     let startIndex = allTimeStrs.indexOf(startStr);
     let endIndex = allTimeStrs.indexOf(endStr);
     
-    if(startIndex > endIndex) {
-      endIndex = startIndex;
-      document.getElementById('modal-end-time').value = startStr;
+    if(endIndex <= startIndex) {
+      endIndex = startIndex + 1;
+      document.getElementById('modal-end-time').value = allTimeStrs[endIndex];
     }
     
     let newHours = [];
-    for(let i=startIndex; i<=endIndex; i++){
+    for(let i=startIndex; i<endIndex; i++){
       newHours.push(allTimeStrs[i]);
     }
     
