@@ -104,8 +104,8 @@
     box-sizing: border-box;
     border-radius: 12px 12px 0 0;
   }
-  .header-left h1 { font-size: 16px; color: #444; font-weight: 700; margin-bottom: 4px; }
-  .header-left p { font-size: 10px; color: #666; background: #f0f4f2; padding: 2px 6px; border-radius: 6px; display: inline-block;}
+  .header-left h1 { font-size: 16px; color: #444; font-weight: 700; margin: 0; }
+  .header-left p { font-size: 10px; color: #666; background: #f0f4f2; padding: 2px 6px; border-radius: 6px; margin: 0; display: flex; align-items: center; justify-content: center; height: 20px;}
   .settings-btn {
     background: #455a64; color: #fff; border: none; padding: 6px 10px;
     border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;
@@ -371,10 +371,8 @@
         <div class="hamburger-menu" onclick="toggleNav()">
           <div></div><div></div><div></div>
         </div>
-        <div>
-          <h1 id="app-title">育児スケジュール</h1>
-          <p id="status-text">🔴 接続中...</p>
-        </div>
+        <h1 id="app-title">育児スケジュール</h1>
+        <p id="status-text">🔴 接続中...</p>
       </div>
       <div style="display: flex; gap: 8px;">
         <button class="settings-btn" id="toggle-baby-btn" onclick="toggleBabyCol()" style="background: #0288d1;">👶 とうた</button>
