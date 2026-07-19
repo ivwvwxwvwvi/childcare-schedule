@@ -116,9 +116,10 @@
     font-weight: 700;
     color: #777;
   }
-  .th-time { width: 18%; }
-  .th-mom { width: 41%; }
-  .th-dad { width: 41%; }
+  .th-time { width: 18%; transition: width 0.2s; }
+  .th-mom { width: 41%; transition: width 0.2s; }
+  .th-dad { width: 41%; transition: width 0.2s; }
+  .th-baby { width: 0%; overflow: hidden; display: none; transition: width 0.2s; }
   td {
     border-bottom: 1px solid #f2f2f2; border-right: 1px solid #fbfbfb;
     height: 36px; padding: 0; /* paddingを0にしてブロックを画面いっぱいに */
@@ -127,9 +128,28 @@
   td.no-border { border-bottom: none !important; }
   td:last-child { border-right: none; }
   
-  .col-time { width: 18%; font-weight: 700; color: #555; background: #fafafa; position: relative;}
-  .col-mom { width: 41%; position: relative; }
-  .col-dad { width: 41%; position: relative; }
+  .col-time { width: 18%; font-weight: 700; color: #555; background: #fafafa; position: relative; transition: width 0.2s;}
+  .col-mom { width: 41%; position: relative; transition: width 0.2s;}
+  .col-dad { width: 41%; position: relative; transition: width 0.2s;}
+  .col-baby { width: 0%; position: relative; display: none; transition: width 0.2s;}
+
+  .has-baby-col .th-time { width: 16%; }
+  .has-baby-col .th-mom { width: 28%; }
+  .has-baby-col .th-dad { width: 28%; }
+  .has-baby-col .th-baby { width: 28%; display: flex; }
+
+  .has-baby-col .col-time { width: 16%; }
+  .has-baby-col .col-mom { width: 28%; }
+  .has-baby-col .col-dad { width: 28%; }
+  .has-baby-col .col-baby { width: 28%; display: table-cell; }
+
+  .overlay-mom { position: absolute; top: 40px; left: 18%; width: 41%; height: calc(100% - 40px); pointer-events: none; z-index: 5; transition: left 0.2s, width 0.2s; }
+  .overlay-dad { position: absolute; top: 40px; left: 59%; width: 41%; height: calc(100% - 40px); pointer-events: none; z-index: 5; transition: left 0.2s, width 0.2s; }
+  .overlay-baby { position: absolute; top: 40px; left: 100%; width: 0%; height: calc(100% - 40px); pointer-events: none; z-index: 5; display: none; transition: left 0.2s, width 0.2s; }
+
+  .has-baby-col .overlay-mom { left: 16%; width: 28%; }
+  .has-baby-col .overlay-dad { left: 44%; width: 28%; }
+  .has-baby-col .overlay-baby { left: 72%; width: 28%; display: block; }
 
   .merged-text {
     position: absolute;
@@ -219,6 +239,7 @@
   }
   .task-btn.active.mom-active { background: #ffe3e8; border-color: #ffb3c6; color: #c2185b; }
   .task-btn.active.dad-active { background: #e1f5fe; border-color: #81d4fa; color: #0288d1; }
+  .task-btn.active.baby-active { background: #fff3e0; border-color: #ffcc80; color: #e65100; }
   .action-btns { display: flex; gap: 8px; }
   .clear-btn { flex: 1; padding: 12px; border: none; border-radius: 8px; background: #f5f5f5; color: #777; font-weight: 700; }
   .close-btn { flex: 2; padding: 12px; border: none; border-radius: 8px; background: #333; color: #fff; font-weight: 700; }
@@ -254,7 +275,10 @@
         <h1 id="app-title">育児スケジュール</h1>
         <p id="status-text">🔴 接続中...</p>
       </div>
-      <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
+      <div style="display: flex; gap: 8px;">
+        <button class="settings-btn" id="toggle-baby-btn" onclick="toggleBabyCol()" style="background: #0288d1;">👶 とうた</button>
+        <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
+      </div>
     </div>
     <textarea id="pattern-memo" class="pattern-memo" placeholder="このスケジュールのメモ・補足事項をここに入力..."></textarea>
     <div class="table-container">
@@ -262,14 +286,16 @@
         <div class="th-time">時間</div>
         <div class="th-mom">ママ</div>
         <div class="th-dad">パパ</div>
+        <div class="th-baby">とうた</div>
       </div>
       <table>
         <tbody id="schedule-body">
           <!-- JSで生成 -->
         </tbody>
       </table>
-    <div id="overlay-mom" style="position: absolute; top: 40px; left: 18%; width: 41%; height: calc(100% - 40px); pointer-events: none; z-index: 5;"></div>
-    <div id="overlay-dad" style="position: absolute; top: 40px; left: 59%; width: 41%; height: calc(100% - 40px); pointer-events: none; z-index: 5;"></div>
+    <div id="overlay-mom" class="overlay-mom"></div>
+    <div id="overlay-dad" class="overlay-dad"></div>
+    <div id="overlay-baby" class="overlay-baby"></div>
     <div id="current-time-line" class="current-time-line"></div>
   </div>
   </div>
@@ -425,6 +451,16 @@
     }
     
     renderSidebar();
+
+    let babyBtn = document.getElementById('toggle-baby-btn');
+    if (patternsData[currentPatternId].showBabyCol) {
+      document.querySelector('.table-container').classList.add('has-baby-col');
+      babyBtn.style.opacity = '1';
+    } else {
+      document.querySelector('.table-container').classList.remove('has-baby-col');
+      babyBtn.style.opacity = '0.5';
+    }
+
     renderTable();
     
     statusText.innerHTML = "🟢 同期済み";
@@ -568,18 +604,22 @@
         <td class="col-time">${hStr}:00</td>
         <td class="col-mom" onclick="openModal('${hStr}', 'mom')"></td>
         <td class="col-dad" onclick="openModal('${hStr}', 'dad')"></td>
+        <td class="col-baby" onclick="openModal('${hStr}', 'baby')"></td>
       `;
       tbody.appendChild(tr);
     }
     renderOverlay('mom');
     renderOverlay('dad');
+    if (patternsData[currentPatternId] && patternsData[currentPatternId].showBabyCol) {
+      renderOverlay('baby');
+    }
   }
 
   // ブロックのHTML生成（アイコン化と結合判定）
   const taskIcons = { 
     "母乳": "🤱", "ミルク": "🍼", "離乳食": "🥣", "おむつ": "🚼", "お風呂_baby": "🛁", "お風呂_parent": "🛀",
-    "寝る": "💤", "ごはん": "🍚", "自由時間": "☕",
-    "送る": "🚲", "迎える": "🏃", "出勤": "🚶", "帰宅": "🚶", "仕事": "🏢", "リモート": "💻"
+    "寝る": "💤", "ごはん": "🍚", "自由時間": "☕", "お昼寝": "🛌", "保育園": "🎒",
+    "送迎": "🧑‍🤝‍🧑", "通勤": "🚃", "仕事": "🏢", "リモート": "💻"
   };
   
   function renderOverlay(role) {
@@ -647,8 +687,8 @@
       let widthPct = 100 / b.maxCols;
       let leftPct = b.colIndex * widthPct;
       
-      let bgClass = role === 'mom' ? 'bg-mom' : 'bg-dad';
-      const babyTasksArr = ["母乳", "ミルク", "離乳食", "おむつ", "お風呂_baby"];
+      let bgClass = role === 'mom' ? 'bg-mom' : (role === 'dad' ? 'bg-dad' : 'bg-baby');
+      const babyTasksArr = ["母乳", "ミルク", "離乳食", "おむつ", "お風呂_baby", "お昼寝", "保育園"];
       if (babyTasksArr.includes(b.task)) bgClass = 'bg-baby';
       
       let icon = taskIcons[b.task] ? `<span class="icon-only">${taskIcons[b.task]}</span>` : '';
@@ -671,6 +711,7 @@
       el.style.pointerEvents = 'auto';
       el.style.touchAction = 'none';
       el.style.cursor = 'grab';
+      el.style.transition = 'transform 0.15s, box-shadow 0.15s, opacity 0.15s';
       el.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
           ${icon}
@@ -680,33 +721,62 @@
 
       // ドラッグ＆ドロップとタップ判定
       let isDragging = false;
+      let isScrolling = false;
       let startY = 0;
       let initialTop = 0;
+      let dragTimer = null;
+      let dragReady = false;
 
       el.addEventListener('pointerdown', (e) => {
         isDragging = false;
+        isScrolling = false;
+        dragReady = false;
         startY = e.clientY;
         initialTop = parseFloat(el.style.top);
         
-        el.setPointerCapture(e.pointerId);
-        el.style.zIndex = "100";
-        el.style.opacity = "0.8";
-        el.style.cursor = 'grabbing';
+        dragTimer = setTimeout(() => {
+          if (!isScrolling) {
+            dragReady = true;
+            el.setPointerCapture(e.pointerId);
+            el.style.zIndex = "100";
+            el.style.opacity = "0.85";
+            el.style.transform = "scale(1.03)";
+            el.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
+            el.style.cursor = 'grabbing';
+          }
+        }, 400); // 400ms長押しでドラッグモードへ
 
         const onPointerMove = (ev) => {
           let deltaY = ev.clientY - startY;
+          if (!dragReady) {
+            // 長押し前に指が動いた場合はスクロール意図とみなす
+            if (Math.abs(deltaY) > 10) {
+              isScrolling = true;
+              clearTimeout(dragTimer);
+            }
+            return;
+          }
           if (Math.abs(deltaY) > 5) isDragging = true;
           el.style.top = `${initialTop + deltaY}px`;
         };
 
         const onPointerUp = (ev) => {
+          clearTimeout(dragTimer);
           el.removeEventListener('pointermove', onPointerMove);
           el.removeEventListener('pointerup', onPointerUp);
-          el.releasePointerCapture(e.pointerId);
           
+          if (dragReady) {
+            el.releasePointerCapture(e.pointerId);
+          }
           el.style.zIndex = "";
           el.style.opacity = "1";
+          el.style.transform = "none";
+          el.style.boxShadow = "none";
           el.style.cursor = 'grab';
+          
+          if (isScrolling) {
+            return; // 誤タップ（スクロール）だったので何もしない
+          }
           
           if (!isDragging) {
             el.style.top = `${initialTop}px`;
@@ -794,8 +864,8 @@
 
   // ---- モーダル制御ロジック ----
   const taskGroups = {
-    "👶 赤ちゃんのお世話": ["母乳", "ミルク", "離乳食", "おむつ", "お風呂_baby"],
-    "🧑 自分たちの予定": ["寝る", "ごはん", "お風呂_parent", "自由時間", "送る", "迎える", "出勤", "帰宅", "仕事", "リモート"]
+    "👶 赤ちゃんのお世話": ["母乳", "ミルク", "離乳食", "おむつ", "お風呂_baby", "お昼寝", "保育園"],
+    "🧑 自分たちの予定": ["寝る", "ごはん", "お風呂_parent", "自由時間", "送迎", "通勤", "仕事", "リモート"]
   };
   const taskModal = document.getElementById('task-modal');
   const modalBody = document.getElementById('modal-body-container');
@@ -805,12 +875,12 @@
   window.openModal = function(hour, role) {
     currentEditHour = hour;
     currentEditRole = role;
-    let roleName = role === 'mom' ? 'ママ' : 'パパ';
+    let roleName = role === 'mom' ? 'ママ' : (role === 'dad' ? 'パパ' : 'とうた');
     document.getElementById('modal-title').innerText = `${hour}:00 ${roleName}のタスク`;
     
     // 現在のタスクを配列で取得
-    let currentTasks = (currentData[hour]?.[role] || "").split(',').filter(Boolean);
-    let activeClass = role === 'mom' ? 'mom-active' : 'dad-active';
+    let currentTasks = (currentData.schedule?.[hour]?.[role] || currentData[hour]?.[role] || "").split(',').filter(Boolean);
+    let activeClass = role === 'mom' ? 'mom-active' : (role === 'dad' ? 'dad-active' : 'baby-active');
 
     modalBody.innerHTML = "";
     
@@ -853,6 +923,12 @@
     let updates = {};
     updates[currentEditRole] = taskStr;
     update(ref(db, `patterns/${currentPatternId}/schedule/${currentEditHour}`), updates);
+  };
+
+  window.toggleBabyCol = function() {
+    if (!currentPatternId) return;
+    let newValue = !patternsData[currentPatternId].showBabyCol;
+    update(ref(db, `patterns/${currentPatternId}`), { showBabyCol: newValue });
   };
 
   window.clearTask = function() {
