@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>月別・長期子育てスケジュール</title>
+<script>
+  window.onerror = function(msg, url, line, col, error) {
+    var errDiv = document.createElement('div');
+    errDiv.style.position = 'fixed';
+    errDiv.style.top = '0';
+    errDiv.style.left = '0';
+    errDiv.style.width = '100%';
+    errDiv.style.backgroundColor = 'red';
+    errDiv.style.color = 'white';
+    errDiv.style.zIndex = '99999';
+    errDiv.style.padding = '10px';
+    errDiv.style.fontSize = '12px';
+    errDiv.innerHTML = "エラー発生: " + msg + " (行: " + line + ")";
+    document.body.appendChild(errDiv);
+    return false;
+  };
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap');
+  
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Zen Maru Gothic', sans-serif;
+    background-color: #f7faf9;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    -webkit-tap-highlight-color: transparent; 
+  }
+  
+  .header {
+    background: #fff;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #f0f0f0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    z-index: 10;
+  }
+  .header h1 { font-size: 18px; color: #444; font-weight: 700; }
+  .status-text { font-size: 12px; color: #666; background: #f0f4f2; padding: 4px 8px; border-radius: 6px; }
+
+  .table-container {
+    flex: 1;
+    overflow: auto;
+    background: #fff;
+    padding: 16px;
+  }
+  
+  table {
+    border-collapse: collapse;
+    min-width: max-content;
+    table-layout: fixed;
+  }
+
+  th, td {
+    border: 1px solid #e0e0e0;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 12px;
+    padding: 4px;
+    position: relative;
+    cursor: pointer;
+  }
+  
+  .col-header-group {
+    background: #fafafa;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .col-header-group th {
+    background: #fafafa;
+    border-bottom: 2px solid #ddd;
+    color: #555;
+    font-weight: 700;
+  }
+  
+  .month-th { width: 80px; font-size: 13px; }
+  .age-th { font-size: 10px; color: #888; }
+  .half-th { font-size: 10px; color: #888; height: 20px; }
+
+  .row-header {
+    position: sticky;
+    left: 0;
+    background: #fafafa;
+    z-index: 30;
+    font-weight: 700;
+    color: #666;
+    width: 60px;
+    border-right: 2px solid #ddd;
+  }
+  
+  .row-sub-header {
+    position: sticky;
+    left: 60px;
+    background: #fafafa;
+    z-index: 30;
+    width: 40px;
+    font-size: 11px;
+    color: #777;
+    border-right: 1px solid #e0e0e0;
+  }
+
+  /* セルのデザイン */
+  .grid-cell {
+    height: 40px;
+    cursor: cell;
+    transition: background 0.1s;
+  }
+  
+  .overlay-block {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    pointer-events: auto;
+    touch-action: none;
+    cursor: grab;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    word-break: break-word;
+    line-height: 1.2;
+    z-index: 20;
+    overflow: hidden;
+    padding: 2px;
+  }
+
+  .bg-top_memo { background-color: #fff8e1; color: #ef6c00; border: 1px solid #ffe082; }
+  .bg-mom { background-color: #ffe3e8; color: #c2185b; border: 1px solid #ffb3c6; }
+  .bg-dad { background-color: #e1f5fe; color: #0288d1; border: 1px solid #81d4fa; }
+  .bg-bottom_memo { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+
+  /* 選択範囲ハイライト */
+  .range-selected {
+    background-color: rgba(2, 136, 209, 0.2) !important;
+  }
+
+  /* モーダル */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center;
+    z-index: 100;
+  }
+  .modal-content {
+    background: #fff; width: 90%; max-width: 400px; border-radius: 12px;
+    padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    animation: fadeIn 0.15s ease-out;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  .modal-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #444; }
+  .action-btns { display: flex; gap: 8px; margin-top: 16px; }
+  .clear-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; background: #f0f0f0; color: #555; font-weight: 700; cursor: pointer; }
+  .delete-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; background: #ffcdd2; color: #c62828; font-weight: 700; cursor: pointer; }
+  .close-btn { flex: 1; padding: 10px; border: none; border-radius: 6px; background: #333; color: #fff; font-weight: 700; cursor: pointer; }
+  .save-btn { flex: 2; padding: 10px; border: none; border-radius: 6px; background: #0288d1; color: #fff; font-weight: 700; cursor: pointer; }
+  
+  .input-area {
+    width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-family: inherit; font-size: 14px;
+    resize: vertical; min-height: 60px; margin-bottom: 12px;
+  }
+
+  /* Undo/Redo */
+  .floating-actions {
+    position: fixed; bottom: 20px; right: 20px; display: flex; gap: 12px; z-index: 50;
+  }
+  .floating-actions button {
+    background: #0288d1; color: #fff; border: none; width: 40px; height: 40px; border-radius: 50%;
+    font-size: 16px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2); cursor: pointer; transition: 0.2s;
+  }
+  .floating-actions button:disabled { background: #e0e0e0; color: #a0a0a0; box-shadow: none; cursor: not-allowed; }
+
+  /* ハンバーガーメニューとナビゲーション */
+  .hamburger-menu {
+    display: flex; flex-direction: column; gap: 4px; cursor: pointer; padding: 8px; z-index: 60;
+  }
+  .hamburger-menu div {
+    width: 20px; height: 2px; background-color: #555; border-radius: 2px;
+  }
+  
+  .nav-drawer {
+    position: fixed; top: 0; left: -250px; width: 250px; height: 100%; background: #fff;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 200; transition: left 0.3s ease;
+    display: flex; flex-direction: column;
+  }
+  .nav-drawer.open { left: 0; }
+  
+  .nav-header {
+    display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid #f0f0f0;
+  }
+  .nav-links { display: flex; flex-direction: column; padding: 16px; gap: 16px; }
+  .nav-links a { text-decoration: none; color: #333; font-weight: 700; font-size: 14px; display: block; padding: 8px; border-radius: 6px; }
+  .nav-links a:hover { background-color: #f0f4f2; color: #0288d1; }
+  .nav-links a.active { background-color: #e1f5fe; color: #0288d1; }
+  
+  .nav-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4);
+    z-index: 150; display: none; opacity: 0; transition: opacity 0.3s ease;
+  }
+  .nav-overlay.open { display: block; opacity: 1; }
+
+</style>
+</head>
+<body>
+<!-- ナビゲーションドロワー -->
+<div class="nav-drawer" id="nav-drawer">
+  <div class="nav-header">
+    <span style="font-weight: 700; color: #444;">メニュー</span>
+    <button onclick="toggleNav()" style="background: none; border: none; font-size: 16px; cursor: pointer;">✕</button>
+  </div>
+  <div class="nav-links">
+    <a href="index.html">🏠 日々のスケジュール</a>
+    <a href="monthly_schedule.html" class="active">🗓️ 月別・長期スケジュール</a>
+  </div>
+</div>
+<div class="nav-overlay" id="nav-overlay" onclick="toggleNav()"></div>
+
+<div class="header">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <div class="hamburger-menu" onclick="toggleNav()">
+      <div></div><div></div><div></div>
+    </div>
+    <h1>長期スケジュール (月別)</h1>
+  </div>
+  <div style="display: flex; gap: 12px; align-items: center;">
+    <span class="status-text" id="status-text">🔴 接続中...</span>
+  </div>
+</div>
+
+<div class="table-container" id="scroll-container">
+  <div id="table-wrapper" style="position: relative; width: max-content;">
+    <table id="schedule-table">
+      <!-- JSで生成 -->
+    </table>
+    <div id="overlay-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+  </div>
+</div>
+
+<!-- モーダル -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal-content">
+    <div class="modal-title" id="modal-title">予定の編集</div>
+    
+    <div style="margin-bottom: 12px; display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+        <span style="width: 50px; font-weight: 700; color: #555;">対象:</span>
+        <select id="edit-start-row" style="flex:1; padding: 6px; border: 1px solid #ccc; border-radius: 4px;"></select>
+        <span>〜</span>
+        <select id="edit-end-row" style="flex:1; padding: 6px; border: 1px solid #ccc; border-radius: 4px;"></select>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+        <span style="width: 50px; font-weight: 700; color: #555;">期間:</span>
+        <select id="edit-start-col" style="flex:1; padding: 6px; border: 1px solid #ccc; border-radius: 4px;"></select>
+        <span>〜</span>
+        <select id="edit-end-col" style="flex:1; padding: 6px; border: 1px solid #ccc; border-radius: 4px;"></select>
+      </div>
+    </div>
+    <textarea id="edit-input" class="input-area" placeholder="予定やメモを入力..."></textarea>
+    <div class="action-btns">
+      <button class="delete-btn" onclick="deleteEdit()">削除</button>
+      <button class="clear-btn" onclick="clearEdit()">クリア</button>
+      <button class="close-btn" onclick="closeEdit()">キャンセル</button>
+      <button class="save-btn" onclick="saveEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="floating-actions">
+  <button id="undo-btn" onclick="undo()" disabled>↩️</button>
+  <button id="redo-btn" onclick="redo()" disabled>↪️</button>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB_LrMdc1wNheY3cgU1jocn9FwrMAFwpLw",
+    authDomain: "childcare-schedule.firebaseapp.com",
+    databaseURL: "https://childcare-schedule-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "childcare-schedule",
+    storageBucket: "childcare-schedule.firebasestorage.app",
+    messagingSenderId: "941657534679",
+    appId: "1:941657534679:web:18c7fadb28320224a94092"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  
+  // -- 定数定義 --
+  const NUM_COLS = 24; // 12ヶ月 x 2 (前半/後半)
+  const START_YEAR = 2026;
+  const START_MONTH = 8;
+  const DAYS = ['月', '火', '水', '木', '金', '土', '日'];
+  
+  // 列の情報生成
+  const colInfo = [];
+  for (let i = 0; i < NUM_COLS; i++) {
+    let mOff = Math.floor(i / 2);
+    let isLate = i % 2 !== 0;
+    let y = START_YEAR + Math.floor((START_MONTH - 1 + mOff) / 12);
+    let m = ((START_MONTH - 1 + mOff) % 12) + 1;
+    let age = mOff; // 8月が0ヶ月目
+    
+    let ageStr = age < 12 ? `${age}-${age+1}ヶ月` : `1歳${age-12}ヶ月`;
+    if (age === 9 && START_MONTH===8) {
+      // 5月(9ヶ月)の表記用
+      ageStr = "9ヶ月";
+    }
+    
+    colInfo.push({
+      year: y, month: m, isLate: isLate,
+      label: `${m}月${isLate ? '後' : '前'}`,
+      monthLabel: `${m}月`,
+      ageStr: ageStr
+    });
+  }
+
+  // グループ構造
+  const groups = [
+    { id: 'top_memo', name: '上部メモ', subRows: [{ id: 'top_memo', name: '全般' }] },
+    { id: 'mom', name: 'ママ', subRows: DAYS.map((d, i) => ({ id: `mom_${i}`, name: d })) },
+    { id: 'dad', name: 'パパ', subRows: DAYS.map((d, i) => ({ id: `dad_${i}`, name: d })) },
+    { id: 'bottom_memo', name: '下部メモ', subRows: [{ id: 'bottom_memo', name: '全般' }] }
+  ];
+
+  // 全行のフラットリスト
+  const allRows = [];
+  groups.forEach(g => {
+    g.subRows.forEach(sr => {
+      allRows.push({ groupId: g.id, groupName: g.name, rowId: sr.id, rowName: sr.name });
+    });
+  });
+
+  // -- 初期データ (画像に基づく) --
+  const initialData = {};
+  function setInit(rowId, startCol, endCol, val) {
+    for (let c = startCol; c <= endCol; c++) {
+      if (!initialData[`${rowId}_${c}`]) initialData[`${rowId}_${c}`] = val;
+    }
+  }
+  
+  // 上部メモ
+  setInit('top_memo', 0, 1, "母乳メイン"); // 8月
+  setInit('top_memo', 12, 15, "離乳食スタート"); // 2月〜3月
+
+  // ママ (11=1月後半, 15=3月後半, 16=4月前半)
+  for (let d = 0; d < 5; d++) { // 月〜金
+    setInit(`mom_${d}`, 11, 15, "午前(8-14:30)");
+    setInit(`mom_${d}`, 16, 23, "フル(予)");
+  }
+  setInit(`mom_5`, 11, 15, "午前(9-14:30)"); // 土
+  setInit(`mom_5`, 16, 23, "フル");
+  setInit(`mom_6`, 0, 23, "休"); // 日
+
+  // パパ
+  for (let d = 0; d < 5; d++) { // 月〜金
+    setInit(`dad_${d}`, 11, 15, "リモート(午前お世話/送り迎え)");
+    setInit(`dad_${d}`, 16, 23, "リモート(送り迎え)");
+  }
+
+  // 下部メモ
+  setInit('bottom_memo', 0, 1, "①");
+  setInit('bottom_memo', 2, 9, "② 寝返りスタート・寝かせ方考える・保育園申込"); // 9月〜12月
+  setInit('bottom_memo', 10, 15, "③ 保育園に向けたミルク生活開始"); // 1月〜3月
+  setInit('bottom_memo', 16, 23, "④ 慣らし保育期間は要相談(ママ復帰タイミング検討)"); // 4月〜
+
+  // -- 状態 --
+  let currentData = {};
+  
+  const statusText = document.getElementById('status-text');
+  const table = document.getElementById('schedule-table');
+  
+  onValue(ref(db, 'monthly_schedule'), (snapshot) => {
+    if (snapshot.exists()) {
+      currentData = snapshot.val();
+    } else {
+      currentData = initialData;
+      set(ref(db, 'monthly_schedule'), currentData);
+    }
+    statusText.innerText = "🟢 同期済";
+    renderTable();
+  });
+
+  let expandedRowIds = new Set();
+  let expandedCols = new Set();
+  let renderedTdMap = {};
+
+  // -- 描画・結合アルゴリズム --
+  function renderTable() {
+    let compressedCols = [];
+    let c = 0;
+    while (c < NUM_COLS) {
+      if (expandedCols.has(c)) {
+        compressedCols.push({ c: c, w: 1 });
+        c++;
+        continue;
+      }
+      let w = 1;
+      while (c + w < NUM_COLS && !expandedCols.has(c + w)) {
+        let identical = allRows.every(r => 
+          (currentData[`${r.rowId}_${c}`] || "") === (currentData[`${r.rowId}_${c+w}`] || "")
+        );
+        if (!identical) break;
+        w++;
+      }
+      compressedCols.push({ c: c, w: w });
+      c += w;
+    }
+
+    let html = `<thead class="col-header-group"><tr><th colspan="2" style="background:#fff; border:none; z-index:40; min-width: 100px;"></th>`;
+    compressedCols.forEach(cc => {
+      let startInfo = colInfo[cc.c];
+      let endInfo = colInfo[cc.c + cc.w - 1];
+      let label = startInfo.monthLabel + (startInfo.isLate ? '後' : '前');
+      if (cc.w > 1) {
+        label = `${startInfo.monthLabel}${startInfo.isLate?'後':'前'}〜<br>${endInfo.monthLabel}${endInfo.isLate?'後':'前'}`;
+      }
+      let ageStr = startInfo.ageStr;
+      if (cc.w > 1 && startInfo.ageStr !== endInfo.ageStr) {
+         ageStr = `${startInfo.ageStr}〜`;
+      }
+      let cellWidth = cc.w > 1 ? 90 : 50; // 圧縮されている列は90pxに縮小、1列単独は50px
+      html += `<th class="month-th" colspan="1" style="min-width: ${cellWidth}px; width: ${cellWidth}px;">${label}<br><span class="age-th">${ageStr}</span></th>`;
+    });
+    html += `</tr></thead><tbody>`;
+
+    renderedTdMap = {};
+
+    groups.forEach(group => {
+      let compressedRows = [];
+      if (group.id !== 'top_memo' && group.id !== 'bottom_memo') {
+        let r = 0;
+        let rCount = group.subRows.length;
+        while (r < rCount) {
+          if (expandedRowIds.has(group.subRows[r].id)) {
+             compressedRows.push({ r: r, h: 1 });
+             r++;
+             continue;
+          }
+          let h = 1;
+          while (r + h < rCount && !expandedRowIds.has(group.subRows[r+h].id)) {
+            let identical = true;
+            for (let c = 0; c < NUM_COLS; c++) {
+               if ((currentData[`${group.subRows[r].id}_${c}`] || "") !== (currentData[`${group.subRows[r+h].id}_${c}`] || "")) {
+                  identical = false;
+                  break;
+               }
+            }
+            if (!identical) break;
+            h++;
+          }
+          compressedRows.push({ r: r, h: h });
+          r += h;
+        }
+      } else {
+        for (let i = 0; i < group.subRows.length; i++) compressedRows.push({ r: i, h: 1 });
+      }
+
+      for (let i = 0; i < compressedRows.length; i++) {
+        let cr = compressedRows[i];
+        let firstRId = group.subRows[cr.r].id;
+        html += `<tr>`;
+        if (i === 0) {
+          html += `<td class="row-header" rowspan="${compressedRows.length}">${group.name}</td>`;
+        }
+        
+        let rowLabel = group.subRows[cr.r].name;
+        if (cr.h > 1) rowLabel = `${group.subRows[cr.r].name}〜${group.subRows[cr.r + cr.h - 1].name}`;
+        
+        if (group.id !== 'top_memo' && group.id !== 'bottom_memo') {
+          html += `<td class="row-sub-header">${rowLabel}</td>`;
+        } else {
+          html += `<td class="row-sub-header" style="width:0; border:none; padding:0;"></td>`;
+        }
+
+        compressedCols.forEach(cc => {
+          let tdId = `td_${firstRId}_${cc.c}`;
+          let rowIdsStr = group.subRows.slice(cr.r, cr.r + cr.h).map(sr => sr.id).join(',');
+          
+          for (let y = 0; y < cr.h; y++) {
+            let rId = group.subRows[cr.r + y].id;
+            for (let x = 0; x < cc.w; x++) {
+              renderedTdMap[`${rId}_${cc.c + x}`] = tdId;
+            }
+          }
+          
+          html += `<td class="grid-cell" id="${tdId}" colspan="1" rowspan="1" data-rowids="${rowIdsStr}" data-startcol="${cc.c}" data-endcol="${cc.c + cc.w - 1}"></td>`;
+        });
+        html += `</tr>`;
+      }
+    });
+
+    html += `</tbody>`;
+    table.innerHTML = html;
+    
+    // イベントリスナーの設定
+    document.querySelectorAll('.grid-cell').forEach(td => {
+      td.addEventListener('pointerdown', handleGridPointerDown);
+      td.addEventListener('pointerenter', handleGridPointerEnter);
+    });
+
+    // 描画後、少し待ってからオーバーレイを計算 (DOMのサイズ確定後)
+    setTimeout(renderOverlays, 10);
+  }
+
+  function renderOverlays() {
+    const container = document.getElementById('overlay-container');
+    const tableWrapper = document.getElementById('table-wrapper');
+    container.innerHTML = "";
+    
+    let wrapperRect = tableWrapper.getBoundingClientRect();
+    
+    groups.forEach(group => {
+      let rCount = group.subRows.length;
+      let covered = Array.from({length: rCount}, () => Array(NUM_COLS).fill(false));
+      let cells = [];
+      
+      for (let r = 0; r < rCount; r++) {
+        for (let c = 0; c < NUM_COLS; c++) {
+          if (covered[r][c]) continue;
+          let rowId = group.subRows[r].id;
+          let val = currentData[`${rowId}_${c}`] || "";
+          
+          if (!val) continue; // 空白はブロック化しない
+          
+          let w = 1;
+          while (c + w < NUM_COLS && !covered[r][c+w] && (currentData[`${rowId}_${c+w}`] || "") === val) {
+            w++;
+          }
+          
+          let h = 1;
+          let canExpandDown = true;
+          while (r + h < rCount) {
+            let nextRowId = group.subRows[r+h].id;
+            for (let i = 0; i < w; i++) {
+              if (covered[r+h][c+i] || (currentData[`${nextRowId}_${c+i}`] || "") !== val) {
+                canExpandDown = false;
+                break;
+              }
+            }
+            if (!canExpandDown) break;
+            h++;
+          }
+          
+          for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+              covered[r+y][c+x] = true;
+            }
+          }
+          cells.push({ r, c, w, h, val, rowIds: group.subRows.slice(r, r+h).map(sr => sr.id), groupId: group.id });
+        }
+      }
+
+      // ブロックの描画
+      cells.forEach(cell => {
+        let startTdId = renderedTdMap[`${cell.rowIds[0]}_${cell.c}`];
+        let endTdId = renderedTdMap[`${cell.rowIds[cell.h-1]}_${cell.c + cell.w - 1}`];
+        let startTd = document.getElementById(startTdId);
+        let endTd = document.getElementById(endTdId);
+        if (!startTd || !endTd) return;
+        
+        let startRect = startTd.getBoundingClientRect();
+        let endRect = endTd.getBoundingClientRect();
+        
+        let top = startRect.top - wrapperRect.top + 2;
+        let left = startRect.left - wrapperRect.left + 2;
+        let width = endRect.right - startRect.left - 4;
+        let height = endRect.bottom - startRect.top - 4;
+        
+        let block = document.createElement('div');
+        block.className = `overlay-block bg-${cell.groupId}`;
+        block.style.top = top + 'px';
+        block.style.left = left + 'px';
+        block.style.width = width + 'px';
+        block.style.height = height + 'px';
+        block.innerHTML = cell.val.replace(/\n/g, '<br>');
+        
+        block.addEventListener('pointerdown', (e) => {
+          if (e.button !== 0 && e.pointerType === 'mouse') return;
+          e.stopPropagation();
+
+          let dragReady = false;
+          let isScrolling = false;
+          let startY = e.clientY;
+          let startX = e.clientX;
+          let dragTimer = null;
+          
+          let tdRIds = startTd.dataset.rowids.split(',');
+          let tdStartCol = parseInt(startTd.dataset.startcol);
+          let tdEndCol = parseInt(startTd.dataset.endcol);
+          let isCompressed = tdRIds.length > 1 || tdStartCol < tdEndCol;
+
+          dragTimer = setTimeout(() => {
+            if (!isScrolling) {
+              dragReady = true;
+              
+              let rect = block.getBoundingClientRect();
+              let ghost = block.cloneNode(true);
+              ghost.style.position = 'fixed';
+              ghost.style.top = rect.top + 'px';
+              ghost.style.left = rect.left + 'px';
+              ghost.style.width = rect.width + 'px';
+              ghost.style.height = rect.height + 'px';
+              ghost.style.zIndex = '9999';
+              ghost.style.opacity = '0.85';
+              ghost.style.transform = 'scale(1.03)';
+              ghost.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+              ghost.style.cursor = 'grabbing';
+              document.body.appendChild(ghost);
+              
+              ghost.setPointerCapture(e.pointerId);
+              block.style.opacity = '0';
+              
+              if (isCompressed) {
+                cell.rowIds.forEach(id => expandedRowIds.add(id));
+                for(let i = cell.c; i < cell.c + cell.w; i++) expandedCols.add(i);
+                renderTable(); 
+              }
+              
+              const onPointerMove = (ev) => {
+                let deltaY = ev.clientY - startY;
+                let deltaX = ev.clientX - startX;
+                ghost.style.top = (rect.top + deltaY) + 'px';
+                ghost.style.left = (rect.left + deltaX) + 'px';
+              };
+              
+              const onPointerUp = (ev) => {
+                document.removeEventListener('pointermove', onPointerMove, { capture: true });
+                document.removeEventListener('pointerup', onPointerUp, { capture: true });
+                ghost.releasePointerCapture(e.pointerId);
+                
+                ghost.style.display = 'none';
+                let elemBelow = document.elementFromPoint(ev.clientX, ev.clientY);
+                ghost.style.display = 'flex';
+                
+                let targetTd = elemBelow ? elemBelow.closest('.grid-cell') : null;
+                let rowDelta = 0, colDelta = 0;
+                if (targetTd) {
+                  let targetRId = targetTd.dataset.rowids.split(',')[0];
+                  let targetC = parseInt(targetTd.dataset.startcol);
+                  
+                  let oldStartRowIdx = allRows.findIndex(r => r.rowId === cell.rowIds[0]);
+                  let newStartRowIdx = allRows.findIndex(r => r.rowId === targetRId);
+                  rowDelta = newStartRowIdx - oldStartRowIdx;
+                  colDelta = targetC - cell.c;
+                  
+                  if (rowDelta !== 0 || colDelta !== 0) {
+                    moveBlockData(cell, rowDelta, colDelta);
+                  }
+                }
+                ghost.remove();
+                if (!targetTd || (rowDelta === 0 && colDelta === 0)) {
+                   renderTable(); 
+                }
+              };
+              
+              document.addEventListener('pointermove', onPointerMove, { capture: true, passive: false });
+              document.addEventListener('pointerup', onPointerUp, { capture: true });
+            }
+          }, 400);
+
+          const checkScrollMove = (ev) => {
+            if (Math.abs(ev.clientY - startY) > 10 || Math.abs(ev.clientX - startX) > 10) {
+              isScrolling = true;
+              clearTimeout(dragTimer);
+              document.removeEventListener('pointermove', checkScrollMove);
+              document.removeEventListener('pointerup', cancelDrag);
+            }
+          };
+          
+          const cancelDrag = (ev) => {
+            clearTimeout(dragTimer);
+            document.removeEventListener('pointermove', checkScrollMove);
+            document.removeEventListener('pointerup', cancelDrag);
+            
+            if (!dragReady && !isScrolling) {
+              if (isCompressed) {
+                cell.rowIds.forEach(id => expandedRowIds.add(id));
+                for(let i = cell.c; i < cell.c + cell.w; i++) expandedCols.add(i);
+                renderTable();
+              } else {
+                openEditModal(cell.rowIds, cell.c, cell.c + cell.w - 1, currentData[`${cell.rowIds[0]}_${cell.c}`] || "");
+              }
+            }
+          };
+          
+          document.addEventListener('pointermove', checkScrollMove, { passive: false });
+          document.addEventListener('pointerup', cancelDrag);
+        });
+
+        container.appendChild(block);
+      });
+    });
+  }
+
+  // -- インタラクション (範囲選択とモーダル) --
+  let isDragging = false;
+  let dragStartCell = null;
+  let selectedCells = [];
+
+  function handleGridPointerDown(e) {
+    if (e.button !== 0 && e.pointerType === 'mouse') return; // ignore right click
+    
+    let rIds = e.currentTarget.dataset.rowids.split(',');
+    let startCol = parseInt(e.currentTarget.dataset.startcol);
+    let endCol = parseInt(e.currentTarget.dataset.endcol);
+    
+    let isCompressed = rIds.length > 1 || startCol < endCol;
+    
+    // 圧縮ブロックをタップした場合は、その部分だけを展開して終了
+    if (isCompressed) {
+        e.stopPropagation();
+        rIds.forEach(id => expandedRowIds.add(id));
+        for(let i=startCol; i<=endCol; i++) expandedCols.add(i);
+        renderTable();
+        return;
+    }
+
+    isDragging = true;
+    dragStartCell = { rIds, c: startCol };
+    updateSelection(e.currentTarget);
+    
+    document.addEventListener('pointerup', handleGridPointerUp);
+    
+    if (e.pointerType === 'touch') {
+      // スマホのスワイプ操作を少し待ってからドラッグと判定
+      setTimeout(() => { if(navigator.vibrate && isDragging) navigator.vibrate(30); }, 300);
+    }
+  }
+  
+  function handleGridPointerEnter(e) {
+    if (isDragging) {
+      updateSelection(e.currentTarget);
+    }
+  }
+  
+  function updateSelection(targetTd) {
+    document.querySelectorAll('.grid-cell.range-selected').forEach(td => td.classList.remove('range-selected'));
+    selectedCells = [];
+    
+    let startRowId = dragStartCell.rIds[0];
+    let startCol = dragStartCell.c;
+    let endRowIds = targetTd.dataset.rowids.split(',');
+    let endCol = parseInt(targetTd.dataset.startcol);
+    
+    let startRowIdx = allRows.findIndex(r => r.rowId === startRowId);
+    let endRowIdx = allRows.findIndex(r => r.rowId === endRowIds[0]);
+    
+    if (startRowIdx > endRowIdx) [startRowIdx, endRowIdx] = [endRowIdx, startRowIdx];
+    if (startCol > endCol) [startCol, endCol] = [endCol, startCol];
+    
+    let selectedTdIds = new Set();
+    
+    for (let r = startRowIdx; r <= endRowIdx; r++) {
+      let rId = allRows[r].rowId;
+      for (let c = startCol; c <= endCol; c++) {
+        let tdId = renderedTdMap[`${rId}_${c}`];
+        if (tdId) selectedTdIds.add(tdId);
+      }
+    }
+    
+    selectedTdIds.forEach(id => {
+      let td = document.getElementById(id);
+      if (td) {
+        td.classList.add('range-selected');
+        selectedCells.push(td);
+      }
+    });
+  }
+
+  function handleGridPointerUp(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    document.removeEventListener('pointerup', handleGridPointerUp);
+    
+    if (selectedCells.length === 0) return;
+    
+    let rowIdsSet = new Set();
+    let colsSet = new Set();
+    selectedCells.forEach(td => {
+      td.dataset.rowids.split(',').forEach(id => rowIdsSet.add(id));
+      let startCol = parseInt(td.dataset.startcol);
+      let endCol = parseInt(td.dataset.endcol);
+      for(let i=startCol; i<=endCol; i++) colsSet.add(i);
+    });
+    
+    let rowIds = [...rowIdsSet];
+    let cols = [...colsSet];
+    let startCol = Math.min(...cols);
+    let endCol = Math.max(...cols);
+    
+    let currentVal = currentData[`${rowIds[0]}_${startCol}`] || "";
+    
+    setTimeout(() => {
+      document.querySelectorAll('.grid-cell.range-selected').forEach(td => td.classList.remove('range-selected'));
+    }, 200);
+    
+    openEditModal(rowIds, startCol, endCol, currentVal);
+  }
+
+  const editModal = document.getElementById('edit-modal');
+  const editInput = document.getElementById('edit-input');
+  const titleEl = document.getElementById('modal-title');
+  
+  let currentEditParams = null;
+
+  const editStartRow = document.getElementById('edit-start-row');
+  const editEndRow = document.getElementById('edit-end-row');
+  const editStartCol = document.getElementById('edit-start-col');
+  const editEndCol = document.getElementById('edit-end-col');
+
+  window.openEditModal = function(rowIds, startCol, endCol, currentVal) {
+    currentEditParams = { rowIds, startCol, endCol, originalVal: currentVal };
+    
+    titleEl.innerText = `予定の編集`;
+    editInput.value = currentVal;
+    
+    // 行の選択肢を生成
+    let rowOptionsHTML = "";
+    allRows.forEach((r, idx) => {
+      rowOptionsHTML += `<option value="${idx}">${r.groupName} - ${r.rowName}</option>`;
+    });
+    editStartRow.innerHTML = rowOptionsHTML;
+    editEndRow.innerHTML = rowOptionsHTML;
+    
+    // 列の選択肢を生成
+    let colOptionsHTML = "";
+    colInfo.forEach((c, idx) => {
+      colOptionsHTML += `<option value="${idx}">${c.label} (${c.ageStr})</option>`;
+    });
+    editStartCol.innerHTML = colOptionsHTML;
+    editEndCol.innerHTML = colOptionsHTML;
+
+    // 現在の選択範囲をセット
+    let startRowIdx = allRows.findIndex(r => r.rowId === rowIds[0]);
+    let endRowIdx = allRows.findIndex(r => r.rowId === rowIds[rowIds.length - 1]);
+    if (startRowIdx === -1) startRowIdx = 0;
+    if (endRowIdx === -1) endRowIdx = 0;
+
+    editStartRow.value = startRowIdx;
+    editEndRow.value = endRowIdx;
+    editStartCol.value = startCol;
+    editEndCol.value = endCol;
+    editModal.style.display = "flex";
+  };
+
+  window.closeEdit = function() {
+    editModal.style.display = "none";
+    expandedRowIds.clear();
+    expandedCols.clear();
+    renderTable();
+  };
+
+  window.clearEdit = function() {
+    editInput.value = "";
+  };
+
+  window.saveEdit = function() {
+    let newVal = editInput.value.trim();
+    let { rowIds, startCol, endCol, originalVal } = currentEditParams;
+    
+    let newStartRowIdx = parseInt(editStartRow.value);
+    let newEndRowIdx = parseInt(editEndRow.value);
+    let newStartCol = parseInt(editStartCol.value);
+    let newEndCol = parseInt(editEndCol.value);
+    
+    if (newStartRowIdx > newEndRowIdx) [newStartRowIdx, newEndRowIdx] = [newEndRowIdx, newStartRowIdx];
+    if (newStartCol > newEndCol) [newStartCol, newEndCol] = [newEndCol, newStartCol];
+
+    let updates = {};
+    let diff = { undo: {}, redo: {} };
+    
+    // 古い範囲をクリア (値が同じ場合のみクリア、別の予定を上書きしないようにする)
+    rowIds.forEach(rId => {
+      for (let c = startCol; c <= endCol; c++) {
+        let key = `${rId}_${c}`;
+        if ((currentData[key] || "") === originalVal) {
+          diff.undo[key] = currentData[key] || "";
+          updates[key] = "";
+          diff.redo[key] = "";
+        }
+      }
+    });
+    
+    // 新しい範囲にセット
+    for (let rIdx = newStartRowIdx; rIdx <= newEndRowIdx; rIdx++) {
+      let rId = allRows[rIdx].rowId;
+      for (let c = newStartCol; c <= newEndCol; c++) {
+        let key = `${rId}_${c}`;
+        if (!diff.undo.hasOwnProperty(key)) {
+          diff.undo[key] = currentData[key] || "";
+        }
+        updates[key] = newVal;
+        diff.redo[key] = newVal;
+      }
+    }
+    
+    pushUndoState(diff);
+    Object.assign(currentData, updates);
+    update(ref(db, 'monthly_schedule'), updates);
+    
+    closeEdit();
+  };
+
+  window.deleteEdit = function() {
+    let { rowIds, startCol, endCol, originalVal } = currentEditParams;
+    
+    if (confirm("この予定を削除してもよろしいですか？")) {
+      let updates = {};
+      let diff = { undo: {}, redo: {} };
+      
+      rowIds.forEach(rId => {
+        for (let c = startCol; c <= endCol; c++) {
+          let key = `${rId}_${c}`;
+          if ((currentData[key] || "") === originalVal) {
+            diff.undo[key] = currentData[key] || "";
+            updates[key] = "";
+            diff.redo[key] = "";
+          }
+        }
+      });
+      
+      pushUndoState(diff);
+      Object.assign(currentData, updates);
+      update(ref(db, 'monthly_schedule'), updates);
+      
+      closeEdit();
+    }
+  };
+
+  // -- Undo / Redo --
+  let undoStack = [];
+  let redoStack = [];
+
+  function updateUndoRedoButtons() {
+    document.getElementById('undo-btn').disabled = undoStack.length === 0;
+    document.getElementById('redo-btn').disabled = redoStack.length === 0;
+  }
+
+  function pushUndoState(diff) {
+    undoStack.push(diff);
+    redoStack = []; 
+    updateUndoRedoButtons();
+  }
+
+  window.undo = function() {
+    if (undoStack.length === 0) return;
+    let diff = undoStack.pop();
+    redoStack.push(diff);
+    updateUndoRedoButtons();
+    update(ref(db, 'monthly_schedule'), diff.undo);
+  };
+
+  window.redo = function() {
+    if (redoStack.length === 0) return;
+    let diff = redoStack.pop();
+    undoStack.push(diff);
+    updateUndoRedoButtons();
+    update(ref(db, 'monthly_schedule'), diff.redo);
+  };
+
+  // ナビゲーション切り替え
+  window.toggleNav = function() {
+    const drawer = document.getElementById('nav-drawer');
+    const overlay = document.getElementById('nav-overlay');
+    if (drawer.classList.contains('open')) {
+      drawer.classList.remove('open');
+      overlay.classList.remove('open');
+      setTimeout(() => overlay.style.display = 'none', 300);
+    } else {
+      overlay.style.display = 'block';
+      setTimeout(() => {
+        drawer.classList.add('open');
+        overlay.classList.add('open');
+      }, 10);
+    }
+  };
+
+  // 外部タップで圧縮に戻す
+  document.addEventListener('pointerdown', (e) => {
+    let hasExpanded = expandedRowIds.size > 0 || expandedCols.size > 0;
+    if (hasExpanded && !e.target.closest('#table-wrapper') && !e.target.closest('#edit-modal') && !e.target.closest('.hamburger-menu')) {
+      expandedRowIds.clear();
+      expandedCols.clear();
+      renderTable();
+    }
+  });
+
+  window.moveBlockData = function(cell, rowDelta, colDelta) {
+    let updates = {};
+    let diff = { undo: {}, redo: {} };
+    
+    // Clear old area
+    for (let y = 0; y < cell.h; y++) {
+      let rIdx = allRows.findIndex(r => r.rowId === cell.rowIds[y]);
+      let rId = allRows[rIdx].rowId;
+      for (let x = 0; x < cell.w; x++) {
+        let c = cell.c + x;
+        let key = `${rId}_${c}`;
+        if (!diff.undo.hasOwnProperty(key)) diff.undo[key] = currentData[key] || "";
+        updates[key] = "";
+        diff.redo[key] = "";
+      }
+    }
+    
+    // Set new area
+    for (let y = 0; y < cell.h; y++) {
+      let oldRIdx = allRows.findIndex(r => r.rowId === cell.rowIds[y]);
+      let newRIdx = oldRIdx + rowDelta;
+      if (newRIdx < 0 || newRIdx >= allRows.length) continue;
+      
+      let newRId = allRows[newRIdx].rowId;
+      for (let x = 0; x < cell.w; x++) {
+        let newC = cell.c + x + colDelta;
+        if (newC < 0 || newC >= NUM_COLS) continue;
+        
+        let key = `${newRId}_${newC}`;
+        if (!diff.undo.hasOwnProperty(key)) diff.undo[key] = currentData[key] || "";
+        updates[key] = cell.val;
+        diff.redo[key] = cell.val;
+      }
+    }
+    
+    pushUndoState(diff);
+    Object.assign(currentData, updates);
+    set(ref(db, 'monthly_schedule'), currentData);
+    renderTable();
+  };
+
+</script>
+</body>
+</html>
