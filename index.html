@@ -1011,7 +1011,6 @@
       el.style.boxSizing = 'border-box';
       el.style.overflow = 'hidden';
       el.style.pointerEvents = 'auto';
-      el.style.touchAction = 'none';
       el.style.cursor = 'grab';
       el.style.transition = 'transform 0.15s, box-shadow 0.15s, opacity 0.15s';
       el.innerHTML = `
@@ -1060,13 +1059,31 @@
           el.style.top = `${initialTop + deltaY}px`;
         };
 
+        const onPointerCancel = (ev) => {
+          clearTimeout(dragTimer);
+          el.removeEventListener('pointermove', onPointerMove);
+          el.removeEventListener('pointerup', onPointerUp);
+          el.removeEventListener('pointercancel', onPointerCancel);
+          
+          if (dragReady) {
+            try { el.releasePointerCapture(e.pointerId); } catch(err) {}
+          }
+          el.style.zIndex = "";
+          el.style.opacity = "1";
+          el.style.transform = "none";
+          el.style.boxShadow = "none";
+          el.style.cursor = 'grab';
+          el.style.top = `${initialTop}px`;
+        };
+
         const onPointerUp = (ev) => {
           clearTimeout(dragTimer);
           el.removeEventListener('pointermove', onPointerMove);
           el.removeEventListener('pointerup', onPointerUp);
+          el.removeEventListener('pointercancel', onPointerCancel);
           
           if (dragReady) {
-            el.releasePointerCapture(e.pointerId);
+            try { el.releasePointerCapture(e.pointerId); } catch(err) {}
           }
           el.style.zIndex = "";
           el.style.opacity = "1";
@@ -1098,7 +1115,15 @@
 
         el.addEventListener('pointermove', onPointerMove);
         el.addEventListener('pointerup', onPointerUp);
+        el.addEventListener('pointercancel', onPointerCancel);
       });
+
+      // 400ms長押し後（dragReady=true）のドラッグ中はブラウザのスクロールを防ぐ
+      el.addEventListener('touchmove', (ev) => {
+        if (dragReady && ev.cancelable) {
+          ev.preventDefault();
+        }
+      }, { passive: false });
 
       overlay.appendChild(el);
     });
