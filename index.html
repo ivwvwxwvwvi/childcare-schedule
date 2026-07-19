@@ -37,20 +37,19 @@
   }
   .sidebar-header {
     font-size: 14px; font-weight: 700; color: #444; margin-bottom: 12px;
-  }
-  .pattern-list { list-style: none; padding: 0; margin-bottom: 16px; }
-  .pattern-item {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 10px 8px; border-radius: 6px; cursor: pointer; margin-bottom: 4px;
-    font-size: 13px; font-weight: 700; color: #555;
-    transition: background 0.2s;
   }
-  .pattern-item:hover { background: #f5f5f5; }
-  .pattern-item.active { background: #e1f5fe; color: #0288d1; }
-  .pattern-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pattern-select-container {
+    display: flex; gap: 8px; align-items: center; margin-bottom: 16px;
+  }
+  #pattern-select {
+    flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-size: 13px; font-family: inherit; width: 100%; box-sizing: border-box;
+  }
+  .add-btn { background: #f0f0f0; border-radius: 4px; padding: 4px 8px; font-weight: 700; color: #555; font-size: 11px; text-decoration: none; cursor: pointer; border: none; }
+  .add-btn:hover { background: #e0e0e0; }
   .pattern-actions { display: flex; gap: 4px; }
   .pattern-memo {
-    width: 100%; min-height: 50px; padding: 8px 12px; margin-bottom: 12px;
+    width: calc(100% - 24px); min-height: 50px; padding: 8px 12px; margin: 12px;
     border: 1px solid #ddd; border-radius: 6px; background: #fdfdfd;
     font-size: 13px; color: #555; resize: vertical; box-sizing: border-box;
     font-family: inherit; line-height: 1.4;
@@ -61,12 +60,6 @@
     font-size: 12px; padding: 4px;
   }
   .icon-btn:hover { color: #555; }
-  .add-pattern-btn {
-    background: #f0f0f0; border: none; padding: 10px; border-radius: 6px;
-    font-weight: 700; cursor: pointer; color: #555; width: 100%;
-    transition: background 0.2s;
-  }
-  .add-pattern-btn:hover { background: #e0e0e0; }
 
   @media (max-width: 600px) {
     .layout-container { flex-direction: column; }
@@ -80,7 +73,6 @@
     flex: 1;
     border-radius: 12px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.06);
-    overflow: hidden;
     padding-bottom: 20px;
   }
   .header {
@@ -90,6 +82,10 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid #f0f0f0;
+    z-index: 50;
+    height: 60px;
+    box-sizing: border-box;
+    border-radius: 12px 12px 0 0;
   }
   .header-left h1 { font-size: 16px; color: #444; font-weight: 700; margin-bottom: 4px; }
   .header-left p { font-size: 10px; color: #666; background: #f0f4f2; padding: 2px 6px; border-radius: 6px; display: inline-block;}
@@ -97,12 +93,32 @@
     background: #455a64; color: #fff; border: none; padding: 6px 10px;
     border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;
   }
-  
-  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  th {
-    padding: 6px 0; font-size: 11px; color: #777;
-    border-bottom: 1px solid #eee; background: #fafafa; font-weight: 700;
+  .table-container {
+    position: relative;
+    width: 100%;
   }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+  .sticky-thead {
+    display: flex;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: #fafafa;
+    height: 40px;
+    box-shadow: inset 0 -1px 0 #eee;
+  }
+  .sticky-thead > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #777;
+  }
+  .th-time { width: 18%; }
+  .th-mom { width: 41%; }
+  .th-dad { width: 41%; }
   td {
     border-bottom: 1px solid #f2f2f2; border-right: 1px solid #fbfbfb;
     height: 36px; padding: 0; /* paddingを0にしてブロックを画面いっぱいに */
@@ -135,6 +151,30 @@
     align-items: center; justify-content: center; padding: 2px; gap: 2px;
   }
   .task-container.cont-top { padding-top: 0; }
+  .task-container.cont-bottom { padding-bottom: 0; }
+  .task-container.cont-both { padding-top: 0; padding-bottom: 0; }
+
+  /* 現在時刻の横線 */
+  .current-time-line {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #ffab91; /* 薄めのオレンジ系で色彩に合わせる */
+    pointer-events: none;
+    z-index: 20;
+    display: none;
+  }
+  .current-time-line::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: -3px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #ffab91;
+  }
   .task-container.cont-bottom { padding-bottom: 0; }
   
   .task-block {
@@ -192,11 +232,19 @@
 <div class="layout-container">
   <!-- サイドバー -->
   <div class="sidebar">
-    <div class="sidebar-header">📅 パターン一覧</div>
-    <ul class="pattern-list" id="pattern-list">
-      <!-- JSで生成 -->
-    </ul>
-    <button class="add-pattern-btn" onclick="addPattern()">+ 新規追加</button>
+    <div class="sidebar-header">
+      <span>📅 パターン</span>
+      <button class="add-btn" onclick="addPattern()">➕ 追加</button>
+    </div>
+    <div class="pattern-select-container">
+      <select id="pattern-select" onchange="selectPattern(this.value)">
+        <!-- JSで生成 -->
+      </select>
+      <div class="pattern-actions">
+        <button class="icon-btn" onclick="editPatternName(document.getElementById('pattern-select').value)">✏️</button>
+        <button class="icon-btn" onclick="deletePattern(document.getElementById('pattern-select').value)">🗑️</button>
+      </div>
+    </div>
   </div>
 
   <!-- メイン画面 -->
@@ -205,22 +253,25 @@
       <div class="header-left">
         <h1 id="app-title">育児スケジュール</h1>
         <p id="status-text">🔴 接続中...</p>
+      </div>
+      <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
     </div>
-    <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
+    <textarea id="pattern-memo" class="pattern-memo" placeholder="このスケジュールのメモ・補足事項をここに入力..."></textarea>
+    <div class="table-container">
+      <div class="sticky-thead">
+        <div class="th-time">時間</div>
+        <div class="th-mom">ママ</div>
+        <div class="th-dad">パパ</div>
+      </div>
+      <table>
+        <tbody id="schedule-body">
+          <!-- JSで生成 -->
+        </tbody>
+      </table>
+    <div id="overlay-mom" style="position: absolute; top: 40px; left: 18%; width: 41%; height: calc(100% - 40px); pointer-events: none; z-index: 5;"></div>
+    <div id="overlay-dad" style="position: absolute; top: 40px; left: 59%; width: 41%; height: calc(100% - 40px); pointer-events: none; z-index: 5;"></div>
+    <div id="current-time-line" class="current-time-line"></div>
   </div>
-  <textarea id="pattern-memo" class="pattern-memo" placeholder="このスケジュールのメモ・補足事項をここに入力..."></textarea>
-  <table>
-    <thead>
-      <tr>
-        <th class="col-time">時間</th>
-        <th class="col-mom">ママ</th>
-        <th class="col-dad">パパ</th>
-      </tr>
-    </thead>
-    <tbody id="schedule-body">
-      <!-- JSで生成 -->
-    </tbody>
-  </table>
   </div>
 </div>
 
@@ -246,6 +297,31 @@
       <select id="dark-end"></select>
     </div>
     <button class="close-btn" style="width:100%" onclick="saveSettings()">保存して閉じる</button>
+  </div>
+</div>
+
+<!-- カスタムプロンプトモーダル -->
+<div class="modal-overlay" id="prompt-modal">
+  <div class="modal-content" style="max-width: 300px;">
+    <div class="modal-title" id="prompt-title">入力</div>
+    <div style="margin-bottom: 16px;">
+      <input type="text" id="prompt-input" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px;" />
+    </div>
+    <div class="action-btns">
+      <button class="clear-btn" id="prompt-cancel-btn">キャンセル</button>
+      <button class="close-btn" id="prompt-ok-btn">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- カスタム確認モーダル -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-content" style="max-width: 300px;">
+    <div class="modal-title" id="confirm-title" style="margin-bottom: 24px; line-height: 1.4;">確認</div>
+    <div class="action-btns">
+      <button class="clear-btn" id="confirm-cancel-btn">キャンセル</button>
+      <button class="close-btn" id="confirm-ok-btn" style="background-color: #d32f2f;">削除</button>
+    </div>
   </div>
 </div>
 
@@ -291,7 +367,7 @@
 
   const tbody = document.getElementById('schedule-body');
   const statusText = document.getElementById('status-text');
-  const patternList = document.getElementById('pattern-list');
+  const patternSelect = document.getElementById('pattern-select');
   const appTitle = document.getElementById('app-title');
 
   // データ同期
@@ -356,19 +432,14 @@
   });
 
   window.renderSidebar = function() {
-    patternList.innerHTML = "";
+    patternSelect.innerHTML = "";
     Object.keys(patternsData).forEach(id => {
       const pattern = patternsData[id];
-      const li = document.createElement('li');
-      li.className = `pattern-item ${id === currentPatternId ? 'active' : ''}`;
-      li.innerHTML = `
-        <span class="pattern-name" onclick="selectPattern('${id}')">${pattern.name}</span>
-        <div class="pattern-actions">
-          <button class="icon-btn" onclick="editPatternName('${id}')">✏️</button>
-          <button class="icon-btn" onclick="deletePattern('${id}')">🗑️</button>
-        </div>
-      `;
-      patternList.appendChild(li);
+      const option = document.createElement('option');
+      option.value = id;
+      option.innerText = pattern.name;
+      if (id === currentPatternId) option.selected = true;
+      patternSelect.appendChild(option);
     });
   }
 
@@ -381,36 +452,98 @@
     renderTable();
   };
 
+  // カスタムプロンプト関数
+  function showPrompt(message, defaultValue, callback) {
+    const modal = document.getElementById('prompt-modal');
+    const title = document.getElementById('prompt-title');
+    const input = document.getElementById('prompt-input');
+    const okBtn = document.getElementById('prompt-ok-btn');
+    const cancelBtn = document.getElementById('prompt-cancel-btn');
+
+    title.innerText = message;
+    input.value = defaultValue || "";
+    modal.style.display = "flex";
+    input.focus();
+
+    const cleanup = () => {
+      modal.style.display = "none";
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+    };
+
+    okBtn.onclick = () => {
+      const val = input.value;
+      cleanup();
+      callback(val);
+    };
+
+    cancelBtn.onclick = () => {
+      cleanup();
+      callback(null);
+    };
+  }
+
   window.editPatternName = function(id) {
-    const newName = prompt("スケジュールの名前を入力してください", patternsData[id].name);
-    if (newName && newName.trim() !== "") {
-      update(ref(db, `patterns/${id}`), { name: newName.trim() });
-    }
+    showPrompt("スケジュールの名前を入力してください", patternsData[id].name, (newName) => {
+      if (newName && newName.trim() !== "") {
+        update(ref(db, `patterns/${id}`), { name: newName.trim() });
+      }
+    });
   };
 
   window.addPattern = function() {
-    const newName = prompt("新しいスケジュールの名前を入力してください", "新スケジュール");
-    if (newName && newName.trim() !== "") {
-      const newId = 'pattern_' + Date.now();
-      update(ref(db, `patterns/${newId}`), {
-        name: newName.trim(),
-        schedule: defaultSchedule
-      });
-      currentPatternId = newId;
-    }
+    showPrompt("新しいスケジュールの名前を入力してください", "新スケジュール", (newName) => {
+      if (newName && newName.trim() !== "") {
+        const newId = 'pattern_' + Date.now();
+        update(ref(db, `patterns/${newId}`), {
+          name: newName.trim(),
+          schedule: defaultSchedule
+        });
+        currentPatternId = newId;
+      }
+    });
   };
+
+  // カスタム確認関数
+  function showConfirm(message, callback) {
+    const modal = document.getElementById('confirm-modal');
+    const title = document.getElementById('confirm-title');
+    const okBtn = document.getElementById('confirm-ok-btn');
+    const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+    title.innerText = message;
+    modal.style.display = "flex";
+
+    const cleanup = () => {
+      modal.style.display = "none";
+      okBtn.onclick = null;
+      cancelBtn.onclick = null;
+    };
+
+    okBtn.onclick = () => {
+      cleanup();
+      callback(true);
+    };
+
+    cancelBtn.onclick = () => {
+      cleanup();
+      callback(false);
+    };
+  }
 
   window.deletePattern = function(id) {
     if (Object.keys(patternsData).length <= 1) {
       alert("最後のスケジュールは削除できません。");
       return;
     }
-    if (confirm(`スケジュール「${patternsData[id].name}」を削除してもよろしいですか？`)) {
-      set(ref(db, `patterns/${id}`), null);
-      if (currentPatternId === id) {
-        currentPatternId = null; // 次の同期で別のパターンが自動選択されます
+    showConfirm(`スケジュール「${patternsData[id].name}」を削除してもよろしいですか？`, (isOk) => {
+      if (isOk) {
+        set(ref(db, `patterns/${id}`), null);
+        if (currentPatternId === id) {
+          currentPatternId = null; 
+        }
       }
-    }
+    });
   };
 
   // 暗室判定ロジック
@@ -427,48 +560,19 @@
     tbody.innerHTML = "";
     for (let h = 0; h < 24; h++) {
       let hStr = h.toString().padStart(2, '0');
-      let rowData = currentData[hStr] || { mom: "", dad: "" };
       let tr = document.createElement('tr');
       
       if (isDarkHour(h)) tr.className = "dark-row";
 
-      // 連続ブロック判定（前の時間、次の時間とタスクが完全一致するか）
-      let prevMom = h > 0 ? (currentData[(h-1).toString().padStart(2, '0')]?.mom || "") : "";
-      let nextMom = h < 23 ? (currentData[(h+1).toString().padStart(2, '0')]?.mom || "") : "";
-      let prevDad = h > 0 ? (currentData[(h-1).toString().padStart(2, '0')]?.dad || "") : "";
-      let nextDad = h < 23 ? (currentData[(h+1).toString().padStart(2, '0')]?.dad || "") : "";
-
-      let momNoBorder = (rowData.mom !== "" && rowData.mom === nextMom) ? "no-border" : "";
-      let dadNoBorder = (rowData.dad !== "" && rowData.dad === nextDad) ? "no-border" : "";
-
-      // 結合スパンの計算（最初のブロックの場合のみ、何時間連続するか数える）
-      let momSpan = 1;
-      if (rowData.mom !== "" && rowData.mom !== prevMom) {
-        for(let nextH = h + 1; nextH < 24; nextH++) {
-          if ((currentData[nextH.toString().padStart(2, '0')]?.mom || "") === rowData.mom) momSpan++;
-          else break;
-        }
-      }
-
-      let dadSpan = 1;
-      if (rowData.dad !== "" && rowData.dad !== prevDad) {
-        for(let nextH = h + 1; nextH < 24; nextH++) {
-          if ((currentData[nextH.toString().padStart(2, '0')]?.dad || "") === rowData.dad) dadSpan++;
-          else break;
-        }
-      }
-
       tr.innerHTML = `
         <td class="col-time">${hStr}:00</td>
-        <td class="col-mom ${momNoBorder}" onclick="openModal('${hStr}', 'mom')">
-          ${renderBlock(rowData.mom, prevMom, nextMom, 'mom', momSpan)}
-        </td>
-        <td class="col-dad ${dadNoBorder}" onclick="openModal('${hStr}', 'dad')">
-          ${renderBlock(rowData.dad, prevDad, nextDad, 'dad', dadSpan)}
-        </td>
+        <td class="col-mom" onclick="openModal('${hStr}', 'mom')"></td>
+        <td class="col-dad" onclick="openModal('${hStr}', 'dad')"></td>
       `;
       tbody.appendChild(tr);
     }
+    renderOverlay('mom');
+    renderOverlay('dad');
   }
 
   // ブロックのHTML生成（アイコン化と結合判定）
@@ -478,49 +582,101 @@
     "送る": "🚲", "迎える": "🏃", "出勤": "🚶", "帰宅": "🚶", "仕事": "🏢", "リモート": "💻"
   };
   
-  function renderBlock(taskStr, prevStr, nextStr, role, span) {
-    if (!taskStr) return "";
-
-    let isFirst = taskStr !== prevStr;
-    let isLast = taskStr !== nextStr;
-
-    let contClass = "";
-    if (!isFirst) contClass += " cont-top";
-    if (!isLast) contClass += " cont-bottom";
-
-    const babyTasksArr = ["母乳", "ミルク", "離乳食", "おむつ", "お風呂_baby"];
-    let tasks = taskStr.split(',');
-
-    // タスクごとに個別のブロックを生成（色はタスクごとに判定）
-    let bgBlocksHtml = tasks.map(t => {
-      let bgClass = role === 'mom' ? 'bg-mom' : 'bg-dad';
-      if (babyTasksArr.includes(t)) bgClass = 'bg-baby';
-      
-      return `<div class="task-block ${bgClass} ${contClass}"></div>`;
-    }).join('');
-
-    let contentHtml = "";
-    if (isFirst) {
-      let innerHtml = tasks.map(t => {
-        let icon = taskIcons[t] ? `<span class="icon-only">${taskIcons[t]}</span>` : '';
-        let displayLabel = t === "お風呂_baby" || t === "お風呂_parent" ? "お風呂" : t;
-        let text = `<span class="text-badge">${displayLabel}</span>`;
-        return `
-          <div style="flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap;">
-            ${icon}${text}
-          </div>
-        `;
-      }).join('');
-      // 1枠の高さ36px × 連続する時間数 でコンテナ高さを設定し、その中で上下左右中央揃えにする
-      contentHtml = `<div class="merged-text" style="height: ${span * 36}px;">${innerHtml}</div>`;
+  function renderOverlay(role) {
+    const overlay = document.getElementById(`overlay-${role}`);
+    overlay.innerHTML = "";
+    
+    let taskMatrix = [];
+    for (let h = 0; h < 24; h++) {
+      let hStr = h.toString().padStart(2, '0');
+      let tasksStr = currentData[hStr]?.[role] || "";
+      taskMatrix[h] = tasksStr.split(',').filter(Boolean);
+    }
+    
+    let blocks = [];
+    for (let h = 0; h < 24; h++) {
+      let tasks = taskMatrix[h];
+      tasks.forEach(task => {
+        if (h > 0 && taskMatrix[h-1].includes(task)) {
+          for (let i = blocks.length - 1; i >= 0; i--) {
+            if (blocks[i].task === task && blocks[i].endHour === h - 1) {
+              blocks[i].endHour = h;
+              break;
+            }
+          }
+        } else {
+          blocks.push({ task: task, startHour: h, endHour: h });
+        }
+      });
     }
 
-    return `
-      <div class="task-container ${contClass}">
-        ${bgBlocksHtml}
-        ${contentHtml}
-      </div>
-    `;
+    const ROW_HEIGHT = 36; // td has height: 36px and box-sizing: border-box
+    
+    blocks.forEach(b => { b.colIndex = 0; b.maxCols = 1; });
+    
+    blocks.forEach(b => {
+      let col = 0;
+      while (true) {
+        let conflict = false;
+        for (let i = 0; i < blocks.length; i++) {
+          if (blocks[i] !== b && blocks[i].colIndex === col && (b.startHour <= blocks[i].endHour && b.endHour >= blocks[i].startHour)) {
+             conflict = true;
+             break;
+          }
+        }
+        if (!conflict) break;
+        col++;
+      }
+      b.colIndex = col;
+    });
+    
+    blocks.forEach(b => {
+        let maxOverlap = 1;
+        blocks.forEach(other => {
+            if (b.startHour <= other.endHour && b.endHour >= other.startHour) {
+                maxOverlap = Math.max(maxOverlap, other.colIndex + 1);
+            }
+        });
+        b.maxCols = maxOverlap;
+    });
+
+    blocks.forEach(b => {
+      let top = b.startHour * ROW_HEIGHT;
+      let height = (b.endHour - b.startHour + 1) * ROW_HEIGHT;
+      
+      let widthPct = 100 / b.maxCols;
+      let leftPct = b.colIndex * widthPct;
+      
+      let bgClass = role === 'mom' ? 'bg-mom' : 'bg-dad';
+      const babyTasksArr = ["母乳", "ミルク", "離乳食", "おむつ", "お風呂_baby"];
+      if (babyTasksArr.includes(b.task)) bgClass = 'bg-baby';
+      
+      let icon = taskIcons[b.task] ? `<span class="icon-only">${taskIcons[b.task]}</span>` : '';
+      let displayLabel = b.task === "お風呂_baby" || b.task === "お風呂_parent" ? "お風呂" : b.task;
+      
+      let el = document.createElement('div');
+      el.className = `task-block ${bgClass}`;
+      el.style.position = 'absolute';
+      el.style.top = `${top + 1}px`;
+      el.style.height = `${height - 2}px`;
+      el.style.left = `${leftPct}%`;
+      el.style.width = `${widthPct}%`;
+      el.style.flexDirection = 'column';
+      el.style.justifyContent = 'center';
+      el.style.padding = '2px';
+      el.style.border = '1px solid rgba(255,255,255,0.8)';
+      el.style.borderRadius = '6px';
+      el.style.boxSizing = 'border-box';
+      el.style.overflow = 'hidden';
+      el.style.pointerEvents = 'none';
+      el.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
+          ${icon}
+          ${height >= ROW_HEIGHT * 2 || !icon ? `<div style="font-size:10px; margin-top:2px; word-break:break-all; text-align:center; line-height:1.1;">${displayLabel}</div>` : ''}
+        </div>
+      `;
+      overlay.appendChild(el);
+    });
   }
 
   // ---- メモ制御ロジック ----
@@ -631,6 +787,26 @@
     });
     settingsModal.style.display = "none";
   };
+
+  // ---- 現在時刻の横線更新ロジック ----
+  function updateCurrentTimeLine() {
+    const now = new Date();
+    const hour = now.getHours();
+    const minute = now.getMinutes();
+    const line = document.getElementById('current-time-line');
+    
+    // 0時の開始位置が40px(ヘッダーの高さ)、1時間あたり36px
+    const ROW_HEIGHT = 36;
+    const HEADER_HEIGHT = 40;
+    const yPos = HEADER_HEIGHT + (hour * ROW_HEIGHT) + (minute / 60) * ROW_HEIGHT;
+    
+    line.style.top = `${yPos}px`;
+    line.style.display = "block";
+  }
+
+  // 初期実行と1分ごとの更新
+  updateCurrentTimeLine();
+  setInterval(updateCurrentTimeLine, 60000);
 </script>
 </body>
 </html>
