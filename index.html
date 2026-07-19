@@ -4,6 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>育児タイムスケジュール</title>
+<script>
+  window.onerror = function(msg, url, line, col, error) {
+    var errDiv = document.createElement('div');
+    errDiv.style.position = 'fixed';
+    errDiv.style.top = '0';
+    errDiv.style.left = '0';
+    errDiv.style.width = '100%';
+    errDiv.style.backgroundColor = 'red';
+    errDiv.style.color = 'white';
+    errDiv.style.zIndex = '99999';
+    errDiv.style.padding = '10px';
+    errDiv.style.fontSize = '12px';
+    errDiv.innerHTML = "エラー発生: " + msg + " (行: " + line + ")";
+    document.body.appendChild(errDiv);
+    return false;
+  };
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap');
   
@@ -122,7 +139,7 @@
   .th-baby { width: 0%; overflow: hidden; display: none; transition: width 0.2s; }
   td {
     border-bottom: 1px solid #f2f2f2; border-right: 1px solid #fbfbfb;
-    height: 36px; padding: 0; /* paddingを0にしてブロックを画面いっぱいに */
+    height: 18px; padding: 0; /* paddingを0にしてブロックを画面いっぱいに */
     text-align: center; vertical-align: middle; font-size: 11px; cursor: pointer;
   }
   td.no-border { border-bottom: none !important; }
@@ -408,18 +425,30 @@
   
   // 初期データ構造（スリム化）
   const defaultSchedule = {
-    "00": { mom: "", dad: "寝る" }, "01": { mom: "母乳,おむつ", dad: "寝る" },
-    "02": { mom: "", dad: "寝る" }, "03": { mom: "", dad: "寝る" },
-    "04": { mom: "母乳,おむつ", dad: "寝る" }, "05": { mom: "", dad: "寝る" },
-    "06": { mom: "", dad: "起床" }, "07": { mom: "ごはん", dad: "おむつ" },
-    "08": { mom: "", dad: "" }, "09": { mom: "", dad: "" },
-    "10": { mom: "おむつ", dad: "寝る" }, "11": { mom: "", dad: "寝る" },
-    "12": { mom: "ごはん", dad: "寝る" }, "13": { mom: "離乳食,おむつ", dad: "寝る" },
-    "14": { mom: "", dad: "寝る" }, "15": { mom: "", dad: "寝る" },
-    "16": { mom: "ミルク,おむつ", dad: "" }, "17": { mom: "ごはん", dad: "" },
-    "18": { mom: "", dad: "お風呂_baby" }, "19": { mom: "母乳", dad: "おむつ" },
-    "20": { mom: "", dad: "" }, "21": { mom: "寝る", dad: "" },
-    "22": { mom: "寝る", dad: "ミルク,おむつ" }, "23": { mom: "寝る", dad: "" }
+    "00:00": { mom: "", dad: "寝る" }, "00:30": { mom: "", dad: "寝る" },
+    "01:00": { mom: "母乳,おむつ", dad: "寝る" }, "01:30": { mom: "母乳,おむつ", dad: "寝る" },
+    "02:00": { mom: "", dad: "寝る" }, "02:30": { mom: "", dad: "寝る" },
+    "03:00": { mom: "", dad: "寝る" }, "03:30": { mom: "", dad: "寝る" },
+    "04:00": { mom: "母乳,おむつ", dad: "寝る" }, "04:30": { mom: "母乳,おむつ", dad: "寝る" },
+    "05:00": { mom: "", dad: "寝る" }, "05:30": { mom: "", dad: "寝る" },
+    "06:00": { mom: "", dad: "起床" }, "06:30": { mom: "", dad: "起床" },
+    "07:00": { mom: "ごはん", dad: "おむつ" }, "07:30": { mom: "ごはん", dad: "おむつ" },
+    "08:00": { mom: "", dad: "" }, "08:30": { mom: "", dad: "" },
+    "09:00": { mom: "", dad: "" }, "09:30": { mom: "", dad: "" },
+    "10:00": { mom: "おむつ", dad: "寝る" }, "10:30": { mom: "おむつ", dad: "寝る" },
+    "11:00": { mom: "", dad: "寝る" }, "11:30": { mom: "", dad: "寝る" },
+    "12:00": { mom: "ごはん", dad: "寝る" }, "12:30": { mom: "ごはん", dad: "寝る" },
+    "13:00": { mom: "離乳食,おむつ", dad: "寝る" }, "13:30": { mom: "離乳食,おむつ", dad: "寝る" },
+    "14:00": { mom: "", dad: "寝る" }, "14:30": { mom: "", dad: "寝る" },
+    "15:00": { mom: "", dad: "寝る" }, "15:30": { mom: "", dad: "寝る" },
+    "16:00": { mom: "ミルク,おむつ", dad: "" }, "16:30": { mom: "ミルク,おむつ", dad: "" },
+    "17:00": { mom: "ごはん", dad: "" }, "17:30": { mom: "ごはん", dad: "" },
+    "18:00": { mom: "", dad: "お風呂_baby" }, "18:30": { mom: "", dad: "お風呂_baby" },
+    "19:00": { mom: "母乳", dad: "おむつ" }, "19:30": { mom: "母乳", dad: "おむつ" },
+    "20:00": { mom: "", dad: "" }, "20:30": { mom: "", dad: "" },
+    "21:00": { mom: "寝る", dad: "" }, "21:30": { mom: "寝る", dad: "" },
+    "22:00": { mom: "寝る", dad: "ミルク,おむつ" }, "22:30": { mom: "寝る", dad: "ミルク,おむつ" },
+    "23:00": { mom: "寝る", dad: "" }, "23:30": { mom: "寝る", dad: "" }
   };
   const defaultSettings = { darkStart: 19, darkEnd: 6 };
 
@@ -445,9 +474,8 @@
     if (!rangeMode) return;
     let start = Math.min(rangeStartHour, rangeEndHour);
     let end = Math.max(rangeStartHour, rangeEndHour);
-    for (let h = start; h <= end; h++) {
-      let hStr = h.toString().padStart(2, '0');
-      let td = tbody.querySelector(`td[data-hour="${hStr}"][data-role="${rangeRole}"]`);
+    for (let index = start; index <= end; index++) {
+      let td = tbody.querySelector(`td[data-index="${index}"][data-role="${rangeRole}"]`);
       if (td) td.classList.add('range-selected');
     }
   }
@@ -458,7 +486,7 @@
     if (e.target.closest('.merged-text')) return; // タスクブロック上のタップは無視
 
     rangeRole = td.getAttribute('data-role');
-    rangeStartHour = parseInt(td.getAttribute('data-hour'));
+    rangeStartHour = parseInt(td.getAttribute('data-index'));
     rangeEndHour = rangeStartHour;
     rangeMode = false;
     let isScrolling = false;
@@ -489,7 +517,7 @@
       const el = document.elementFromPoint(ev.clientX, ev.clientY);
       const hoverTd = el ? el.closest('td[data-role]') : null;
       if (hoverTd && hoverTd.getAttribute('data-role') === rangeRole) {
-        rangeEndHour = parseInt(hoverTd.getAttribute('data-hour'));
+        rangeEndHour = parseInt(hoverTd.getAttribute('data-index'));
         updateRangeHighlight();
       }
     };
@@ -501,17 +529,28 @@
       
       if (isScrolling) return;
 
+      const getTimeStr = (index) => {
+        let h = Math.floor(index / 2).toString().padStart(2, '0');
+        let m = index % 2 === 0 ? "00" : "30";
+        return `${h}:${m}`;
+      };
+
       if (!rangeMode) {
-        // 短いタップの場合は単一時間の編集
-        let hStr = rangeStartHour.toString().padStart(2, '0');
-        openModal([hStr], rangeRole);
+        // 短いタップの場合は2枠分（1時間）の編集
+        let start = rangeStartHour;
+        let end = Math.min(start + 1, 47); // 23:30を超えないように
+        let hours = [];
+        for (let i = start; i <= end; i++) {
+          hours.push(getTimeStr(i));
+        }
+        openModal(hours, rangeRole);
       } else {
         // 範囲選択完了
         let start = Math.min(rangeStartHour, rangeEndHour);
         let end = Math.max(rangeStartHour, rangeEndHour);
         let hours = [];
         for (let i = start; i <= end; i++) {
-          hours.push(i.toString().padStart(2, '0'));
+          hours.push(getTimeStr(i));
         }
         openModal(hours, rangeRole);
       }
@@ -740,17 +779,25 @@
     tbody.innerHTML = "";
     for (let h = 0; h < 24; h++) {
       let hStr = h.toString().padStart(2, '0');
-      let tr = document.createElement('tr');
       
-      if (isDarkHour(h)) tr.className = "dark-row";
-
-      tr.innerHTML = `
-        <td class="col-time">${hStr}:00</td>
-        <td class="col-mom" data-hour="${hStr}" data-role="mom"></td>
-        <td class="col-dad" data-hour="${hStr}" data-role="dad"></td>
-        <td class="col-baby" data-hour="${hStr}" data-role="baby"></td>
+      let tr00 = document.createElement('tr');
+      if (isDarkHour(h)) tr00.className = "dark-row";
+      tr00.innerHTML = `
+        <td class="col-time" rowspan="2">${hStr}:00</td>
+        <td class="col-mom no-border" data-index="${h*2}" data-hour="${hStr}:00" data-role="mom" style="border-bottom: 1px dashed #eee;"></td>
+        <td class="col-dad no-border" data-index="${h*2}" data-hour="${hStr}:00" data-role="dad" style="border-bottom: 1px dashed #eee;"></td>
+        <td class="col-baby no-border" data-index="${h*2}" data-hour="${hStr}:00" data-role="baby" style="border-bottom: 1px dashed #eee;"></td>
       `;
-      tbody.appendChild(tr);
+      tbody.appendChild(tr00);
+      
+      let tr30 = document.createElement('tr');
+      if (isDarkHour(h)) tr30.className = "dark-row";
+      tr30.innerHTML = `
+        <td class="col-mom" data-index="${h*2+1}" data-hour="${hStr}:30" data-role="mom"></td>
+        <td class="col-dad" data-index="${h*2+1}" data-hour="${hStr}:30" data-role="dad"></td>
+        <td class="col-baby" data-index="${h*2+1}" data-hour="${hStr}:30" data-role="baby"></td>
+      `;
+      tbody.appendChild(tr30);
     }
     renderOverlay('mom');
     renderOverlay('dad');
@@ -770,31 +817,37 @@
     const overlay = document.getElementById(`overlay-${role}`);
     overlay.innerHTML = "";
     
+    const getTimeStr = (index) => {
+      let h = Math.floor(index / 2).toString().padStart(2, '0');
+      let m = index % 2 === 0 ? "00" : "30";
+      return `${h}:${m}`;
+    };
+
     let taskMatrix = [];
-    for (let h = 0; h < 24; h++) {
-      let hStr = h.toString().padStart(2, '0');
-      let tasksStr = currentData[hStr]?.[role] || "";
-      taskMatrix[h] = tasksStr.split(',').filter(Boolean);
+    for (let i = 0; i < 48; i++) {
+      let tStr = getTimeStr(i);
+      let tasksStr = currentData[tStr]?.[role] || "";
+      taskMatrix[i] = tasksStr.split(',').filter(Boolean);
     }
     
     let blocks = [];
-    for (let h = 0; h < 24; h++) {
-      let tasks = taskMatrix[h];
+    for (let i = 0; i < 48; i++) {
+      let tasks = taskMatrix[i];
       tasks.forEach(task => {
-        if (h > 0 && taskMatrix[h-1].includes(task)) {
-          for (let i = blocks.length - 1; i >= 0; i--) {
-            if (blocks[i].task === task && blocks[i].endHour === h - 1) {
-              blocks[i].endHour = h;
+        if (i > 0 && taskMatrix[i-1].includes(task)) {
+          for (let b = blocks.length - 1; b >= 0; b--) {
+            if (blocks[b].task === task && blocks[b].endIndex === i - 1) {
+              blocks[b].endIndex = i;
               break;
             }
           }
         } else {
-          blocks.push({ task: task, startHour: h, endHour: h });
+          blocks.push({ task: task, startIndex: i, endIndex: i });
         }
       });
     }
 
-    const ROW_HEIGHT = 36; // td has height: 36px and box-sizing: border-box
+    const ROW_HEIGHT = 18; // td has height: 18px and box-sizing: border-box
     
     blocks.forEach(b => { b.colIndex = 0; b.maxCols = 1; });
     
@@ -803,7 +856,7 @@
       while (true) {
         let conflict = false;
         for (let i = 0; i < blocks.length; i++) {
-          if (blocks[i] !== b && blocks[i].colIndex === col && (b.startHour <= blocks[i].endHour && b.endHour >= blocks[i].startHour)) {
+          if (blocks[i] !== b && blocks[i].colIndex === col && (b.startIndex <= blocks[i].endIndex && b.endIndex >= blocks[i].startIndex)) {
             conflict = true;
             break;
           }
@@ -817,7 +870,7 @@
     blocks.forEach(b => {
         let maxOverlap = 1;
         blocks.forEach(other => {
-            if (b.startHour <= other.endHour && b.endHour >= other.startHour) {
+            if (b.startIndex <= other.endIndex && b.endIndex >= other.startIndex) {
                 maxOverlap = Math.max(maxOverlap, other.colIndex + 1);
             }
         });
@@ -825,8 +878,8 @@
     });
 
     blocks.forEach(b => {
-      let top = b.startHour * ROW_HEIGHT;
-      let height = (b.endHour - b.startHour + 1) * ROW_HEIGHT;
+      let top = b.startIndex * ROW_HEIGHT;
+      let height = (b.endIndex - b.startIndex + 1) * ROW_HEIGHT;
       
       let widthPct = 100 / b.maxCols;
       let leftPct = b.colIndex * widthPct;
@@ -863,7 +916,6 @@
         </div>
       `;
 
-      // ドラッグ＆ドロップとタップ判定
       let isDragging = false;
       let isScrolling = false;
       let startY = 0;
@@ -888,12 +940,11 @@
             el.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
             el.style.cursor = 'grabbing';
           }
-        }, 400); // 400ms長押しでドラッグモードへ
+        }, 400);
 
         const onPointerMove = (ev) => {
           let deltaY = ev.clientY - startY;
           if (!dragReady) {
-            // 長押し前に指が動いた場合はスクロール意図とみなす
             if (Math.abs(deltaY) > 10) {
               isScrolling = true;
               clearTimeout(dragTimer);
@@ -919,21 +970,22 @@
           el.style.cursor = 'grab';
           
           if (isScrolling) {
-            return; // 誤タップ（スクロール）だったので何もしない
+            return;
           }
           
           if (!isDragging) {
             el.style.top = `${initialTop}px`;
-            let hStr = b.startHour.toString().padStart(2, '0');
-            openModal(hStr, role);
+            let times = [];
+            for (let i = b.startIndex; i <= b.endIndex; i++) times.push(getTimeStr(i));
+            openModal(times, role);
             return;
           }
 
           let deltaY = ev.clientY - startY;
-          let deltaHours = Math.round(deltaY / ROW_HEIGHT);
+          let deltaRows = Math.round(deltaY / ROW_HEIGHT);
           
-          if (deltaHours !== 0) {
-            moveTaskBlock(role, b, deltaHours);
+          if (deltaRows !== 0) {
+            moveTaskBlock(role, b, deltaRows);
           } else {
             el.style.top = `${initialTop}px`;
           }
@@ -947,22 +999,22 @@
     });
   }
 
-  window.moveTaskBlock = function(role, block, deltaHours) {
-    let newStart = block.startHour + deltaHours;
-    let newEnd = block.endHour + deltaHours;
+  window.moveTaskBlock = function(role, block, deltaRows) {
+    let newStart = block.startIndex + deltaRows;
+    let newEnd = block.endIndex + deltaRows;
     
     if (newStart < 0) {
-      deltaHours = -block.startHour;
+      deltaRows = -block.startIndex;
       newStart = 0;
-      newEnd = block.endHour + deltaHours;
+      newEnd = block.endIndex + deltaRows;
     }
-    if (newEnd > 23) {
-      deltaHours = 23 - block.endHour;
-      newStart = block.startHour + deltaHours;
-      newEnd = 23;
+    if (newEnd > 47) {
+      deltaRows = 47 - block.endIndex;
+      newStart = block.startIndex + deltaRows;
+      newEnd = 47;
     }
     
-    if (deltaHours === 0) {
+    if (deltaRows === 0) {
       renderTable();
       return;
     }
@@ -970,28 +1022,34 @@
     let diff = { undo: {}, redo: {} };
     let updates = {};
     
-    for (let h = block.startHour; h <= block.endHour; h++) {
-      let hStr = h.toString().padStart(2, '0');
-      let currentTasks = currentData[hStr]?.[role] || "";
-      diff.undo[`${hStr}/${role}`] = currentTasks;
+    const getTimeStr = (index) => {
+      let h = Math.floor(index / 2).toString().padStart(2, '0');
+      let m = index % 2 === 0 ? "00" : "30";
+      return `${h}:${m}`;
+    };
+    
+    for (let i = block.startIndex; i <= block.endIndex; i++) {
+      let tStr = getTimeStr(i);
+      let currentTasks = currentData[tStr]?.[role] || "";
+      diff.undo[`${tStr}/${role}`] = currentTasks;
       let taskArr = currentTasks.split(',').filter(Boolean);
       taskArr = taskArr.filter(t => t !== block.task);
-      updates[`${hStr}/${role}`] = taskArr.join(',');
-      diff.redo[`${hStr}/${role}`] = taskArr.join(',');
+      updates[`${tStr}/${role}`] = taskArr.join(',');
+      diff.redo[`${tStr}/${role}`] = taskArr.join(',');
     }
     
-    for (let h = newStart; h <= newEnd; h++) {
-      let hStr = h.toString().padStart(2, '0');
-      let currentTasksStr = updates[`${hStr}/${role}`] !== undefined ? updates[`${hStr}/${role}`] : (currentData[hStr]?.[role] || "");
-      if (diff.undo[`${hStr}/${role}`] === undefined) {
-        diff.undo[`${hStr}/${role}`] = currentData[hStr]?.[role] || "";
+    for (let i = newStart; i <= newEnd; i++) {
+      let tStr = getTimeStr(i);
+      let currentTasksStr = updates[`${tStr}/${role}`] !== undefined ? updates[`${tStr}/${role}`] : (currentData[tStr]?.[role] || "");
+      if (diff.undo[`${tStr}/${role}`] === undefined) {
+        diff.undo[`${tStr}/${role}`] = currentData[tStr]?.[role] || "";
       }
       let taskArr = currentTasksStr.split(',').filter(Boolean);
       if (!taskArr.includes(block.task)) {
         taskArr.push(block.task);
       }
-      updates[`${hStr}/${role}`] = taskArr.join(',');
-      diff.redo[`${hStr}/${role}`] = taskArr.join(',');
+      updates[`${tStr}/${role}`] = taskArr.join(',');
+      diff.redo[`${tStr}/${role}`] = taskArr.join(',');
     }
     
     pushUndoState(diff);
@@ -1031,8 +1089,8 @@
     let roleName = role === 'mom' ? 'ママ' : (role === 'dad' ? 'パパ' : 'とうた');
     
     let titleStr = currentEditHours.length > 1 
-      ? `${currentEditHours[0]}:00 - ${currentEditHours[currentEditHours.length-1]}:00 ${roleName}のタスク`
-      : `${currentEditHours[0]}:00 ${roleName}のタスク`;
+      ? `${currentEditHours[0]} - ${currentEditHours[currentEditHours.length-1]} ${roleName}のタスク`
+      : `${currentEditHours[0]} ${roleName}のタスク`;
       
     document.getElementById('modal-title').innerText = titleStr;
     
@@ -1062,12 +1120,29 @@
         btn.innerHTML = displayText;
         
         btn.onclick = () => {
-          if (isSelected) {
-            currentTasks = currentTasks.filter(t => t !== task);
-          } else {
-            currentTasks.push(task);
-          }
-          updateTask(currentTasks.join(','));
+          let updates = {};
+          let diff = { undo: {}, redo: {} };
+          
+          currentEditHours.forEach(h => {
+            let existingStr = currentData[h]?.[role] || "";
+            let existingArr = existingStr.split(',').filter(Boolean);
+            
+            diff.undo[`${h}/${role}`] = existingStr;
+            
+            if (isSelected) {
+              existingArr = existingArr.filter(t => t !== task);
+            } else {
+              if (!existingArr.includes(task)) existingArr.push(task);
+            }
+            
+            let newStr = existingArr.join(',');
+            updates[`${h}/${role}`] = newStr;
+            diff.redo[`${h}/${role}`] = newStr;
+          });
+          
+          pushUndoState(diff);
+          update(ref(db, `patterns/${currentPatternId}/schedule`), updates);
+          
           openModal(currentEditHours, role); 
         };
         grid.appendChild(btn);
@@ -1099,7 +1174,15 @@
   };
 
   window.clearTask = function() {
-    updateTask("");
+    let updates = {};
+    let diff = { undo: {}, redo: {} };
+    currentEditHours.forEach(h => {
+      diff.undo[`${h}/${currentEditRole}`] = currentData[h]?.[currentEditRole] || "";
+      updates[`${h}/${currentEditRole}`] = "";
+      diff.redo[`${h}/${currentEditRole}`] = "";
+    });
+    pushUndoState(diff);
+    update(ref(db, `patterns/${currentPatternId}/schedule`), updates);
     closeModal();
   };
   window.closeModal = function() { taskModal.style.display = "none"; };
@@ -1169,10 +1252,11 @@
     const minute = now.getMinutes();
     const line = document.getElementById('current-time-line');
     
-    // 0時の開始位置が40px(ヘッダーの高さ)、1時間あたり36px
-    const ROW_HEIGHT = 36;
+    const ROW_HEIGHT = 18;
     const HEADER_HEIGHT = 40;
-    const yPos = HEADER_HEIGHT + (hour * ROW_HEIGHT) + (minute / 60) * ROW_HEIGHT;
+    const totalMinutes = hour * 60 + minute;
+    // 30分で18px -> 1分で0.6px
+    const yPos = HEADER_HEIGHT + (totalMinutes / 30) * ROW_HEIGHT;
     
     line.style.top = `${yPos}px`;
     line.style.display = "block";
