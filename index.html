@@ -405,6 +405,7 @@
   <div class="modal-content">
     <div class="modal-title" id="modal-title">タスクを選択 (複数可)</div>
     <div id="modal-body-container" style="text-align: left; margin-bottom: 16px;"></div>
+    <div id="modal-time-container" style="margin-bottom: 16px;"></div>
     <div class="action-btns">
       <button class="clear-btn" onclick="clearTask()">空にする</button>
       <button class="close-btn" onclick="closeModal()">閉じる</button>
@@ -1192,14 +1193,36 @@
     currentEditRole = role;
     let roleName = role === 'mom' ? 'ママ' : (role === 'dad' ? 'パパ' : 'とうた');
     
+    let firstHour = currentEditHours[0];
+    let lastHour = currentEditHours[currentEditHours.length-1];
+    
+    const allTimeStrs = [];
+    for(let i=0; i<48; i++){
+      let h = Math.floor(i/2).toString().padStart(2, '0');
+      let m = i%2===0 ? "00" : "30";
+      allTimeStrs.push(`${h}:${m}`);
+    }
+
+    let startOptions = allTimeStrs.map(t => `<option value="${t}" ${t===firstHour?'selected':''}>${t}</option>`).join('');
+    let endOptions = allTimeStrs.map(t => `<option value="${t}" ${t===lastHour?'selected':''}>${t}</option>`).join('');
+
     let titleStr = currentEditHours.length > 1 
       ? `${currentEditHours[0]} - ${currentEditHours[currentEditHours.length-1]} ${roleName}のタスク`
       : `${currentEditHours[0]} ${roleName}のタスク`;
       
     document.getElementById('modal-title').innerText = titleStr;
+
+    let timeHtml = `
+      <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+        <span style="font-size: 12px; font-weight: 700; color: #666;">時間:</span>
+        <select id="modal-start-time" onchange="handleModalTimeChange()" style="font-size:16px; font-weight:700; color:#444; border:1px solid #ddd; border-radius:4px; padding:4px;">${startOptions}</select>
+        <span>〜</span>
+        <select id="modal-end-time" onchange="handleModalTimeChange()" style="font-size:16px; font-weight:700; color:#444; border:1px solid #ddd; border-radius:4px; padding:4px;">${endOptions}</select>
+      </div>
+    `;
+    document.getElementById('modal-time-container').innerHTML = timeHtml;
     
     // 現在のタスクを配列で取得（複数の場合は最初の時間を基準とする）
-    let firstHour = currentEditHours[0];
     let currentTasks = (currentData.schedule?.[firstHour]?.[role] || currentData[firstHour]?.[role] || "").split(',').filter(Boolean);
     let activeClass = role === 'mom' ? 'mom-active' : (role === 'dad' ? 'dad-active' : 'baby-active');
 
@@ -1255,6 +1278,71 @@
     }
     
     taskModal.style.display = "flex";
+  };
+
+  window.handleModalTimeChange = function() {
+    let startStr = document.getElementById('modal-start-time').value;
+    let endStr = document.getElementById('modal-end-time').value;
+    
+    const allTimeStrs = [];
+    for(let i=0; i<48; i++){
+      let h = Math.floor(i/2).toString().padStart(2, '0');
+      let m = i%2===0 ? "00" : "30";
+      allTimeStrs.push(`${h}:${m}`);
+    }
+    
+    let startIndex = allTimeStrs.indexOf(startStr);
+    let endIndex = allTimeStrs.indexOf(endStr);
+    
+    if(startIndex > endIndex) {
+      endIndex = startIndex;
+      document.getElementById('modal-end-time').value = startStr;
+    }
+    
+    let newHours = [];
+    for(let i=startIndex; i<=endIndex; i++){
+      newHours.push(allTimeStrs[i]);
+    }
+    
+    let firstHour = currentEditHours[0];
+    let tasksToMove = (currentData.schedule?.[firstHour]?.[currentEditRole] || currentData[firstHour]?.[currentEditRole] || "").split(',').filter(Boolean);
+    
+    if (tasksToMove.length > 0) {
+      let updates = {};
+      let diff = { undo: {}, redo: {} };
+      
+      currentEditHours.forEach(h => {
+        let existingStr = currentData[h]?.[currentEditRole] || "";
+        let existingArr = existingStr.split(',').filter(Boolean);
+        diff.undo[`${h}/${currentEditRole}`] = existingStr;
+        
+        let newArr = existingArr.filter(t => !tasksToMove.includes(t));
+        updates[`${h}/${currentEditRole}`] = newArr.join(',');
+        diff.redo[`${h}/${currentEditRole}`] = newArr.join(',');
+      });
+      
+      newHours.forEach(h => {
+        let currentForH = updates[`${h}/${currentEditRole}`];
+        if (currentForH === undefined) currentForH = currentData[h]?.[currentEditRole] || "";
+        
+        if (diff.undo[`${h}/${currentEditRole}`] === undefined) {
+          diff.undo[`${h}/${currentEditRole}`] = currentData[h]?.[currentEditRole] || "";
+        }
+        
+        let existingArr = currentForH.split(',').filter(Boolean);
+        tasksToMove.forEach(t => {
+          if(!existingArr.includes(t)) existingArr.push(t);
+        });
+        updates[`${h}/${currentEditRole}`] = existingArr.join(',');
+        diff.redo[`${h}/${currentEditRole}`] = existingArr.join(',');
+      });
+      
+      pushUndoState(diff);
+      update(ref(db, `patterns/${currentPatternId}/schedule`), updates);
+    }
+    
+    currentEditHours = newHours;
+    openModal(currentEditHours, currentEditRole);
   };
 
   window.updateTask = function(taskStr) {
