@@ -165,6 +165,9 @@
   .dark-row td.no-border { border-bottom: none !important; }
   .dark-row td.col-time { background-color: #d8d8d8; color: #444; }
 
+  /* 範囲選択ハイライト */
+  .range-selected { background-color: rgba(2, 136, 209, 0.15) !important; transition: background-color 0.1s; }
+
   /* タスクブロックのデザイン */
   .task-container {
     width: 100%; height: 100%; display: flex; flex-direction: row; 
@@ -247,6 +250,40 @@
   /* 設定モーダル */
   .setting-row { display: flex; justify-content: center; align-items: center; gap: 12px; margin-bottom: 20px; }
   .setting-row select { padding: 8px; font-size: 14px; border-radius: 6px; border: 1px solid #ccc; }
+
+  /* フローティングUndo/Redoボタン */
+  .floating-actions {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 12px;
+    z-index: 1000;
+  }
+  .floating-actions button {
+    background: #0288d1;
+    color: #ffffff;
+    border: none;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .floating-actions button:disabled {
+    background: #e0e0e0;
+    color: #a0a0a0;
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+  .floating-actions button:not(:disabled):active {
+    transform: scale(0.95);
+  }
 </style>
 </head>
 <body>
@@ -396,6 +433,99 @@
   const patternSelect = document.getElementById('pattern-select');
   const appTitle = document.getElementById('app-title');
 
+  // ---- 範囲選択ロジック ----
+  let rangeSelectTimer = null;
+  let rangeMode = false;
+  let rangeRole = null;
+  let rangeStartHour = null;
+  let rangeEndHour = null;
+
+  function updateRangeHighlight() {
+    document.querySelectorAll('.range-selected').forEach(el => el.classList.remove('range-selected'));
+    if (!rangeMode) return;
+    let start = Math.min(rangeStartHour, rangeEndHour);
+    let end = Math.max(rangeStartHour, rangeEndHour);
+    for (let h = start; h <= end; h++) {
+      let hStr = h.toString().padStart(2, '0');
+      let td = tbody.querySelector(`td[data-hour="${hStr}"][data-role="${rangeRole}"]`);
+      if (td) td.classList.add('range-selected');
+    }
+  }
+
+  tbody.addEventListener('pointerdown', (e) => {
+    let td = e.target.closest('td[data-role]');
+    if (!td) return;
+    if (e.target.closest('.merged-text')) return; // タスクブロック上のタップは無視
+
+    rangeRole = td.getAttribute('data-role');
+    rangeStartHour = parseInt(td.getAttribute('data-hour'));
+    rangeEndHour = rangeStartHour;
+    rangeMode = false;
+    let isScrolling = false;
+    let startY = e.clientY;
+
+    document.querySelectorAll('.range-selected').forEach(el => el.classList.remove('range-selected'));
+
+    rangeSelectTimer = setTimeout(() => {
+      if (!isScrolling) {
+        rangeMode = true;
+        updateRangeHighlight();
+        if (navigator.vibrate) navigator.vibrate(50);
+      }
+    }, 400);
+
+    const onPointerMove = (ev) => {
+      let deltaY = ev.clientY - startY;
+      if (!rangeMode) {
+        if (Math.abs(deltaY) > 10) {
+          isScrolling = true;
+          clearTimeout(rangeSelectTimer);
+        }
+        return;
+      }
+      
+      ev.preventDefault(); // 範囲選択中はスクロールを防止
+      
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const hoverTd = el ? el.closest('td[data-role]') : null;
+      if (hoverTd && hoverTd.getAttribute('data-role') === rangeRole) {
+        rangeEndHour = parseInt(hoverTd.getAttribute('data-hour'));
+        updateRangeHighlight();
+      }
+    };
+
+    const onPointerUp = (ev) => {
+      clearTimeout(rangeSelectTimer);
+      document.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerup', onPointerUp);
+      
+      if (isScrolling) return;
+
+      if (!rangeMode) {
+        // 短いタップの場合は単一時間の編集
+        let hStr = rangeStartHour.toString().padStart(2, '0');
+        openModal([hStr], rangeRole);
+      } else {
+        // 範囲選択完了
+        let start = Math.min(rangeStartHour, rangeEndHour);
+        let end = Math.max(rangeStartHour, rangeEndHour);
+        let hours = [];
+        for (let i = start; i <= end; i++) {
+          hours.push(i.toString().padStart(2, '0'));
+        }
+        openModal(hours, rangeRole);
+      }
+      
+      rangeMode = false;
+      setTimeout(() => {
+        document.querySelectorAll('.range-selected').forEach(el => el.classList.remove('range-selected'));
+      }, 300); // モーダルが開いた後にハイライトを消す
+    };
+
+    document.addEventListener('pointermove', onPointerMove, { passive: false });
+    document.addEventListener('pointerup', onPointerUp);
+  });
+
   // データ同期
   onValue(ref(db, '/'), (snapshot) => {
     let data = snapshot.val() || {};
@@ -484,6 +614,20 @@
     currentData = patternsData[id].schedule || defaultSchedule;
     appTitle.innerText = patternsData[id].name;
     document.getElementById('pattern-memo').value = patternsData[id].memo || "";
+    
+    let babyBtn = document.getElementById('toggle-baby-btn');
+    if (patternsData[id].showBabyCol) {
+      document.querySelector('.table-container').classList.add('has-baby-col');
+      babyBtn.style.opacity = '1';
+    } else {
+      document.querySelector('.table-container').classList.remove('has-baby-col');
+      babyBtn.style.opacity = '0.5';
+    }
+    
+    undoStack = [];
+    redoStack = [];
+    if (typeof updateUndoRedoButtons === 'function') updateUndoRedoButtons();
+    
     renderSidebar();
     renderTable();
   };
@@ -602,9 +746,9 @@
 
       tr.innerHTML = `
         <td class="col-time">${hStr}:00</td>
-        <td class="col-mom" onclick="openModal('${hStr}', 'mom')"></td>
-        <td class="col-dad" onclick="openModal('${hStr}', 'dad')"></td>
-        <td class="col-baby" onclick="openModal('${hStr}', 'baby')"></td>
+        <td class="col-mom" data-hour="${hStr}" data-role="mom"></td>
+        <td class="col-dad" data-hour="${hStr}" data-role="dad"></td>
+        <td class="col-baby" data-hour="${hStr}" data-role="baby"></td>
       `;
       tbody.appendChild(tr);
     }
@@ -823,25 +967,34 @@
       return;
     }
 
+    let diff = { undo: {}, redo: {} };
     let updates = {};
+    
     for (let h = block.startHour; h <= block.endHour; h++) {
       let hStr = h.toString().padStart(2, '0');
       let currentTasks = currentData[hStr]?.[role] || "";
+      diff.undo[`${hStr}/${role}`] = currentTasks;
       let taskArr = currentTasks.split(',').filter(Boolean);
       taskArr = taskArr.filter(t => t !== block.task);
       updates[`${hStr}/${role}`] = taskArr.join(',');
+      diff.redo[`${hStr}/${role}`] = taskArr.join(',');
     }
     
     for (let h = newStart; h <= newEnd; h++) {
       let hStr = h.toString().padStart(2, '0');
       let currentTasksStr = updates[`${hStr}/${role}`] !== undefined ? updates[`${hStr}/${role}`] : (currentData[hStr]?.[role] || "");
+      if (diff.undo[`${hStr}/${role}`] === undefined) {
+        diff.undo[`${hStr}/${role}`] = currentData[hStr]?.[role] || "";
+      }
       let taskArr = currentTasksStr.split(',').filter(Boolean);
       if (!taskArr.includes(block.task)) {
         taskArr.push(block.task);
       }
       updates[`${hStr}/${role}`] = taskArr.join(',');
+      diff.redo[`${hStr}/${role}`] = taskArr.join(',');
     }
     
+    pushUndoState(diff);
     update(ref(db, `patterns/${currentPatternId}/schedule`), updates);
   };
 
@@ -869,17 +1022,23 @@
   };
   const taskModal = document.getElementById('task-modal');
   const modalBody = document.getElementById('modal-body-container');
-  let currentEditHour = "";
+  let currentEditHours = [];
   let currentEditRole = "";
 
-  window.openModal = function(hour, role) {
-    currentEditHour = hour;
+  window.openModal = function(hours, role) {
+    currentEditHours = Array.isArray(hours) ? hours : [hours];
     currentEditRole = role;
     let roleName = role === 'mom' ? 'ママ' : (role === 'dad' ? 'パパ' : 'とうた');
-    document.getElementById('modal-title').innerText = `${hour}:00 ${roleName}のタスク`;
     
-    // 現在のタスクを配列で取得
-    let currentTasks = (currentData.schedule?.[hour]?.[role] || currentData[hour]?.[role] || "").split(',').filter(Boolean);
+    let titleStr = currentEditHours.length > 1 
+      ? `${currentEditHours[0]}:00 - ${currentEditHours[currentEditHours.length-1]}:00 ${roleName}のタスク`
+      : `${currentEditHours[0]}:00 ${roleName}のタスク`;
+      
+    document.getElementById('modal-title').innerText = titleStr;
+    
+    // 現在のタスクを配列で取得（複数の場合は最初の時間を基準とする）
+    let firstHour = currentEditHours[0];
+    let currentTasks = (currentData.schedule?.[firstHour]?.[role] || currentData[firstHour]?.[role] || "").split(',').filter(Boolean);
     let activeClass = role === 'mom' ? 'mom-active' : (role === 'dad' ? 'dad-active' : 'baby-active');
 
     modalBody.innerHTML = "";
@@ -909,7 +1068,7 @@
             currentTasks.push(task);
           }
           updateTask(currentTasks.join(','));
-          openModal(hour, role); 
+          openModal(currentEditHours, role); 
         };
         grid.appendChild(btn);
       });
@@ -921,8 +1080,16 @@
 
   window.updateTask = function(taskStr) {
     let updates = {};
-    updates[currentEditRole] = taskStr;
-    update(ref(db, `patterns/${currentPatternId}/schedule/${currentEditHour}`), updates);
+    let diff = { undo: {}, redo: {} };
+    
+    currentEditHours.forEach(h => {
+      diff.undo[`${h}/${currentEditRole}`] = currentData[h]?.[currentEditRole] || "";
+      updates[`${h}/${currentEditRole}`] = taskStr;
+      diff.redo[`${h}/${currentEditRole}`] = taskStr;
+    });
+    
+    pushUndoState(diff);
+    update(ref(db, `patterns/${currentPatternId}/schedule`), updates);
   };
 
   window.toggleBabyCol = function() {
@@ -960,6 +1127,41 @@
     settingsModal.style.display = "none";
   };
 
+  window.closeSettings = function() {
+    settingsModal.style.display = "none";
+  };
+
+  // ---- Undo / Redo ロジック ----
+  let undoStack = [];
+  let redoStack = [];
+
+  window.updateUndoRedoButtons = function() {
+    document.getElementById('undo-btn').disabled = undoStack.length === 0;
+    document.getElementById('redo-btn').disabled = redoStack.length === 0;
+  };
+
+  function pushUndoState(diff) {
+    undoStack.push(diff);
+    redoStack = []; // 新しい操作をしたらRedoはクリア
+    updateUndoRedoButtons();
+  }
+
+  window.undo = function() {
+    if (undoStack.length === 0) return;
+    let diff = undoStack.pop();
+    redoStack.push(diff);
+    updateUndoRedoButtons();
+    update(ref(db, `patterns/${currentPatternId}/schedule`), diff.undo);
+  };
+
+  window.redo = function() {
+    if (redoStack.length === 0) return;
+    let diff = redoStack.pop();
+    undoStack.push(diff);
+    updateUndoRedoButtons();
+    update(ref(db, `patterns/${currentPatternId}/schedule`), diff.redo);
+  };
+
   // ---- 現在時刻の横線更新ロジック ----
   function updateCurrentTimeLine() {
     const now = new Date();
@@ -980,5 +1182,9 @@
   updateCurrentTimeLine();
   setInterval(updateCurrentTimeLine, 60000);
 </script>
+<div class="floating-actions">
+  <button id="undo-btn" onclick="undo()" disabled>↩️</button>
+  <button id="redo-btn" onclick="redo()" disabled>↪️</button>
+</div>
 </body>
 </html>
