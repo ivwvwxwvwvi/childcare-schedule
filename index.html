@@ -620,8 +620,8 @@
         let conflict = false;
         for (let i = 0; i < blocks.length; i++) {
           if (blocks[i] !== b && blocks[i].colIndex === col && (b.startHour <= blocks[i].endHour && b.endHour >= blocks[i].startHour)) {
-             conflict = true;
-             break;
+            conflict = true;
+            break;
           }
         }
         if (!conflict) break;
@@ -668,16 +668,112 @@
       el.style.borderRadius = '6px';
       el.style.boxSizing = 'border-box';
       el.style.overflow = 'hidden';
-      el.style.pointerEvents = 'none';
+      el.style.pointerEvents = 'auto';
+      el.style.touchAction = 'none';
+      el.style.cursor = 'grab';
       el.innerHTML = `
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;">
           ${icon}
-          ${height >= ROW_HEIGHT * 2 || !icon ? `<div style="font-size:10px; margin-top:2px; word-break:break-all; text-align:center; line-height:1.1;">${displayLabel}</div>` : ''}
+          ${!icon ? `<div style="font-size:10px; margin-top:2px; word-break:break-all; text-align:center; line-height:1.1;">${displayLabel}</div>` : ''}
         </div>
       `;
+
+      // ドラッグ＆ドロップとタップ判定
+      let isDragging = false;
+      let startY = 0;
+      let initialTop = 0;
+
+      el.addEventListener('pointerdown', (e) => {
+        isDragging = false;
+        startY = e.clientY;
+        initialTop = parseFloat(el.style.top);
+        
+        el.setPointerCapture(e.pointerId);
+        el.style.zIndex = "100";
+        el.style.opacity = "0.8";
+        el.style.cursor = 'grabbing';
+
+        const onPointerMove = (ev) => {
+          let deltaY = ev.clientY - startY;
+          if (Math.abs(deltaY) > 5) isDragging = true;
+          el.style.top = `${initialTop + deltaY}px`;
+        };
+
+        const onPointerUp = (ev) => {
+          el.removeEventListener('pointermove', onPointerMove);
+          el.removeEventListener('pointerup', onPointerUp);
+          el.releasePointerCapture(e.pointerId);
+          
+          el.style.zIndex = "";
+          el.style.opacity = "1";
+          el.style.cursor = 'grab';
+          
+          if (!isDragging) {
+            el.style.top = `${initialTop}px`;
+            let hStr = b.startHour.toString().padStart(2, '0');
+            openModal(hStr, role);
+            return;
+          }
+
+          let deltaY = ev.clientY - startY;
+          let deltaHours = Math.round(deltaY / ROW_HEIGHT);
+          
+          if (deltaHours !== 0) {
+            moveTaskBlock(role, b, deltaHours);
+          } else {
+            el.style.top = `${initialTop}px`;
+          }
+        };
+
+        el.addEventListener('pointermove', onPointerMove);
+        el.addEventListener('pointerup', onPointerUp);
+      });
+
       overlay.appendChild(el);
     });
   }
+
+  window.moveTaskBlock = function(role, block, deltaHours) {
+    let newStart = block.startHour + deltaHours;
+    let newEnd = block.endHour + deltaHours;
+    
+    if (newStart < 0) {
+      deltaHours = -block.startHour;
+      newStart = 0;
+      newEnd = block.endHour + deltaHours;
+    }
+    if (newEnd > 23) {
+      deltaHours = 23 - block.endHour;
+      newStart = block.startHour + deltaHours;
+      newEnd = 23;
+    }
+    
+    if (deltaHours === 0) {
+      renderTable();
+      return;
+    }
+
+    let updates = {};
+    for (let h = block.startHour; h <= block.endHour; h++) {
+      let hStr = h.toString().padStart(2, '0');
+      let currentTasks = currentData[hStr]?.[role] || "";
+      let taskArr = currentTasks.split(',').filter(Boolean);
+      taskArr = taskArr.filter(t => t !== block.task);
+      updates[`${hStr}/${role}`] = taskArr.join(',');
+    }
+    
+    for (let h = newStart; h <= newEnd; h++) {
+      let hStr = h.toString().padStart(2, '0');
+      let currentTasksStr = updates[`${hStr}/${role}`] !== undefined ? updates[`${hStr}/${role}`] : (currentData[hStr]?.[role] || "");
+      let taskArr = currentTasksStr.split(',').filter(Boolean);
+      if (!taskArr.includes(block.task)) {
+        taskArr.push(block.task);
+      }
+      updates[`${hStr}/${role}`] = taskArr.join(',');
+    }
+    
+    update(ref(db, `patterns/${currentPatternId}/schedule`), updates);
+  };
 
   // ---- メモ制御ロジック ----
   const memoEl = document.getElementById('pattern-memo');
