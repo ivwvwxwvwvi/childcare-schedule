@@ -247,6 +247,8 @@
     <h1>長期スケジュール (月別)</h1>
   </div>
   <div style="display: flex; gap: 12px; align-items: center;">
+    <button id="login-btn" onclick="openLoginModal()" style="background: #4caf50; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer;">編集ログイン</button>
+    <button id="logout-btn" onclick="executeLogout()" style="background: #d32f2f; color: #fff; border: none; padding: 6px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; cursor: pointer; display: none;">ログアウト</button>
     <span class="status-text" id="status-text">🔴 接続中...</span>
   </div>
 </div>
@@ -294,9 +296,26 @@
   <button id="redo-btn" onclick="redo()" disabled>↪️</button>
 </div>
 
+<!-- ログインモーダル -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal-content" style="max-width: 300px;">
+    <div class="modal-title">編集ログイン</div>
+    <div style="margin-bottom: 12px;">
+      <input type="email" id="login-email" placeholder="メールアドレス" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; margin-bottom: 8px;" />
+      <input type="password" id="login-password" placeholder="パスワード" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px;" />
+    </div>
+    <div id="login-error" style="color: #d32f2f; font-size: 12px; margin-bottom: 12px; display: none;"></div>
+    <div class="action-btns">
+      <button class="clear-btn" onclick="closeLoginModal()" style="flex:1; padding:10px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">キャンセル</button>
+      <button class="close-btn" onclick="executeLogin()" style="flex:1; padding:10px; border:none; border-radius:6px; font-weight:bold; cursor:pointer; background:#2196f3; color:#fff;">ログイン</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyB_LrMdc1wNheY3cgU1jocn9FwrMAFwpLw",
@@ -310,6 +329,63 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  const auth = getAuth(app);
+  
+  let isAuthenticated = false;
+
+  // 認証状態の監視
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      isAuthenticated = true;
+      document.getElementById('login-btn').style.display = 'none';
+      document.getElementById('logout-btn').style.display = 'inline-block';
+      updateUIVisibility();
+    } else {
+      isAuthenticated = false;
+      document.getElementById('login-btn').style.display = 'inline-block';
+      document.getElementById('logout-btn').style.display = 'none';
+      updateUIVisibility();
+    }
+  });
+
+  window.openLoginModal = function() {
+    document.getElementById('login-modal').style.display = 'flex';
+    document.getElementById('login-error').style.display = 'none';
+  };
+
+  window.closeLoginModal = function() {
+    document.getElementById('login-modal').style.display = 'none';
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-password').value = '';
+  };
+
+  window.executeLogin = function() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const errorEl = document.getElementById('login-error');
+    
+    signInWithEmailAndPassword(auth, email, password)
+      .then(() => {
+        closeLoginModal();
+      })
+      .catch((error) => {
+        errorEl.innerText = "ログインに失敗しました: " + error.message;
+        errorEl.style.display = 'block';
+      });
+  };
+
+  window.executeLogout = function() {
+    signOut(auth);
+  };
+
+  function updateUIVisibility() {
+    // undo/redoボタン
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn) undoBtn.style.visibility = isAuthenticated ? 'visible' : 'hidden';
+    if (redoBtn) redoBtn.style.visibility = isAuthenticated ? 'visible' : 'hidden';
+    // その他の編集系ボタンはここで制御可能
+  }
   
   // -- 定数定義 --
   const NUM_COLS = 24; // 12ヶ月 x 2 (前半/後半)
@@ -699,7 +775,7 @@
                   colDelta = targetC - cell.c;
                   
                   if (rowDelta !== 0 || colDelta !== 0) {
-                    moveBlockData(cell, rowDelta, colDelta);
+                    if(isAuthenticated) moveBlockData(cell, rowDelta, colDelta);
                   }
                 }
                 ghost.remove();
@@ -849,7 +925,7 @@
       document.querySelectorAll('.grid-cell.range-selected').forEach(td => td.classList.remove('range-selected'));
     }, 200);
     
-    openEditModal(rowIds, startCol, endCol, currentVal);
+    if(isAuthenticated) openEditModal(rowIds, startCol, endCol, currentVal);
   }
 
   const editModal = document.getElementById('edit-modal');
