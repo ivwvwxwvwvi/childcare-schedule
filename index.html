@@ -375,6 +375,8 @@
         <p id="status-text">🔴 接続中...</p>
       </div>
       <div style="display: flex; gap: 8px;">
+        <button class="settings-btn" id="login-btn" onclick="openLoginModal()" style="background: #4caf50;">編集ログイン</button>
+        <button class="settings-btn" id="logout-btn" onclick="executeLogout()" style="background: #d32f2f; display: none;">ログアウト</button>
         <button class="settings-btn" id="toggle-baby-btn" onclick="toggleBabyCol()" style="background: #0288d1;">👶 とうた</button>
         <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
       </div>
@@ -451,9 +453,26 @@
   </div>
 </div>
 
+<!-- ログインモーダル -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal-content" style="max-width: 300px;">
+    <div class="modal-title">編集ログイン</div>
+    <div style="margin-bottom: 12px;">
+      <input type="email" id="login-email" placeholder="メールアドレス" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; margin-bottom: 8px;" />
+      <input type="password" id="login-password" placeholder="パスワード" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px;" />
+    </div>
+    <div id="login-error" style="color: #d32f2f; font-size: 12px; margin-bottom: 12px; display: none;"></div>
+    <div class="action-btns">
+      <button class="clear-btn" onclick="closeLoginModal()">キャンセル</button>
+      <button class="close-btn" onclick="executeLogin()">ログイン</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
   // Firebase設定
   const firebaseConfig = {
@@ -468,8 +487,69 @@
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
+  const auth = getAuth(app);
   
-  // 初期データ構造（スリム化）
+  let isAuthenticated = false;
+
+  // 認証状態の監視
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      isAuthenticated = true;
+      document.getElementById('login-btn').style.display = 'none';
+      document.getElementById('logout-btn').style.display = 'inline-block';
+      updateUIVisibility();
+    } else {
+      isAuthenticated = false;
+      document.getElementById('login-btn').style.display = 'inline-block';
+      document.getElementById('logout-btn').style.display = 'none';
+      updateUIVisibility();
+    }
+  });
+
+  window.openLoginModal = function() {
+    document.getElementById('login-modal').style.display = 'flex';
+    document.getElementById('login-error').style.display = 'none';
+  };
+
+  window.closeLoginModal = function() {
+    document.getElementById('login-modal').style.display = 'none';
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-password').value = '';
+  };
+
+  window.executeLogin = function() {
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const errorEl = document.getElementById('login-error');
+    
+    signInWithEmailAndPassword(auth, email, password)
+      .then(() => {
+        closeLoginModal();
+      })
+      .catch((error) => {
+        errorEl.innerText = "ログインに失敗しました: " + error.message;
+        errorEl.style.display = 'block';
+      });
+  };
+
+  window.executeLogout = function() {
+    signOut(auth);
+  };
+
+  function updateUIVisibility() {
+    // 編集ボタン等の表示・非表示を切り替える
+    const addBtn = document.querySelector('.sidebar-header .add-btn');
+    if (addBtn) addBtn.style.display = isAuthenticated ? 'inline-block' : 'none';
+    
+    const patternActions = document.querySelector('.pattern-actions');
+    if (patternActions) patternActions.style.display = isAuthenticated ? 'flex' : 'none';
+    
+    // undo/redoボタン
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn) undoBtn.style.visibility = isAuthenticated ? 'visible' : 'hidden';
+    if (redoBtn) redoBtn.style.visibility = isAuthenticated ? 'visible' : 'hidden';
+  }
   const defaultSchedule = {
     "00:00": { mom: "", dad: "寝る" }, "00:30": { mom: "", dad: "寝る" },
     "01:00": { mom: "母乳,おむつ", dad: "寝る" }, "01:30": { mom: "母乳,おむつ", dad: "寝る" },
@@ -808,6 +888,7 @@
   }
 
   window.editPatternName = function(id) {
+    if (!isAuthenticated) return;
     showPrompt("スケジュールの名前を入力してください", patternsData[id].name, (newName) => {
       if (newName && newName.trim() !== "") {
         update(ref(db, `patterns/${id}`), { name: newName.trim() });
@@ -816,6 +897,7 @@
   };
 
   window.addPattern = function() {
+    if (!isAuthenticated) return;
     showPrompt("新しいスケジュールの名前を入力してください", "新スケジュール", (newName) => {
       if (newName && newName.trim() !== "") {
         const newId = 'pattern_' + Date.now();
@@ -856,6 +938,7 @@
   }
 
   window.deletePattern = function(id) {
+    if (!isAuthenticated) return;
     if (Object.keys(patternsData).length <= 1) {
       alert("最後のスケジュールは削除できません。");
       return;
@@ -1028,6 +1111,7 @@
       let dragReady = false;
 
       el.addEventListener('pointerdown', (e) => {
+        if (!isAuthenticated) return;
         isDragging = false;
         isScrolling = false;
         dragReady = false;
@@ -1130,6 +1214,7 @@
   }
 
   window.moveTaskBlock = function(role, block, deltaRows) {
+    if (!isAuthenticated) return;
     let newStart = block.startIndex + deltaRows;
     let newEnd = block.endIndex + deltaRows;
     
@@ -1214,6 +1299,7 @@
   let currentEditRole = "";
 
   window.openModal = function(hours, role) {
+    if (!isAuthenticated) return;
     currentEditHours = Array.isArray(hours) ? hours : [hours];
     currentEditRole = role;
     let roleName = role === 'mom' ? 'ママ' : (role === 'dad' ? 'パパ' : 'とうた');
@@ -1373,6 +1459,7 @@
   };
 
   window.updateTask = function(taskStr) {
+    if (!isAuthenticated) return;
     let updates = {};
     let diff = { undo: {}, redo: {} };
     
@@ -1393,6 +1480,7 @@
   };
 
   window.clearTask = function() {
+    if (!isAuthenticated) return;
     let updates = {};
     let diff = { undo: {}, redo: {} };
     currentEditHours.forEach(h => {
