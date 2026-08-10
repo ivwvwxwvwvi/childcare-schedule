@@ -379,7 +379,7 @@
       </div>
       <div style="display: flex; gap: 8px;">
         <button class="settings-btn" id="login-btn" onclick="executeLogin()" style="background: #4caf50;">編集ログイン</button>
-        <button class="settings-btn" id="toggle-baby-btn" onclick="toggleBabyCol()" style="background: #0288d1;">👶 とうた</button>
+        <button class="settings-btn" id="toggle-baby-btn" onclick="toggleBabyCol()" style="background: #0288d1;">👶</button>
         <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
       </div>
     </div>
@@ -389,7 +389,7 @@
         <div class="th-time">時間</div>
         <div class="th-mom">ママ</div>
         <div class="th-dad">パパ</div>
-        <div class="th-baby">とうた</div>
+        <div class="th-baby">👶</div>
       </div>
       <table>
         <tbody id="schedule-body">
@@ -1263,7 +1263,7 @@
     if (!isAuthenticated) return;
     currentEditHours = Array.isArray(hours) ? hours : [hours];
     currentEditRole = role;
-    let roleName = role === 'mom' ? 'ママ' : (role === 'dad' ? 'パパ' : 'とうた');
+    let roleName = role === 'mom' ? 'ママ' : (role === 'dad' ? 'パパ' : '👶');
     
     let firstHour = currentEditHours[0];
     let lastHourStart = currentEditHours[currentEditHours.length-1];
