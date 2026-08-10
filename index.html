@@ -375,7 +375,7 @@
         <p id="status-text">🔴 接続中...</p>
       </div>
       <div style="display: flex; gap: 8px;">
-        <button class="settings-btn" id="login-btn" onclick="openLoginModal()" style="background: #4caf50;">編集ログイン</button>
+        <button class="settings-btn" id="login-btn" onclick="executeLogin()" style="background: #4caf50;">編集ログイン</button>
         <button class="settings-btn" id="logout-btn" onclick="executeLogout()" style="background: #d32f2f; display: none;">ログアウト</button>
         <button class="settings-btn" id="toggle-baby-btn" onclick="toggleBabyCol()" style="background: #0288d1;">👶 とうた</button>
         <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
@@ -453,37 +453,11 @@
   </div>
 </div>
 
-<!-- ログインモーダル -->
-<div class="modal-overlay" id="login-modal">
-  <div class="modal-content" style="max-width: 300px;">
-    <div class="modal-title">編集ログイン</div>
-    <div style="margin-bottom: 12px;">
-      <input type="email" id="login-email" placeholder="メールアドレス" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; margin-bottom: 8px;" />
-      <input type="password" id="login-password" placeholder="パスワード" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px;" />
-    </div>
-    <div id="login-error" style="color: #d32f2f; font-size: 12px; margin-bottom: 12px; display: none;"></div>
-    <div class="action-btns">
-      <button class="clear-btn" onclick="closeLoginModal()">キャンセル</button>
-      <button class="close-btn" onclick="executeLogin()">ログイン</button>
-    </div>
-  </div>
-</div>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-  // Firebase設定
-  const firebaseConfig = {
-    apiKey: "AIzaSyB_LrMdc1wNheY3cgU1jocn9FwrMAFwpLw",
-    authDomain: "childcare-schedule.firebaseapp.com",
-    databaseURL: "https://childcare-schedule-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "childcare-schedule",
-    storageBucket: "childcare-schedule.firebasestorage.app",
-    messagingSenderId: "941657534679",
-    appId: "1:941657534679:web:18c7fadb28320224a94092"
-  };
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+  import { firebaseConfig } from "./config.js";
 
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
@@ -506,29 +480,14 @@
     }
   });
 
-  window.openLoginModal = function() {
-    document.getElementById('login-modal').style.display = 'flex';
-    document.getElementById('login-error').style.display = 'none';
-  };
-
-  window.closeLoginModal = function() {
-    document.getElementById('login-modal').style.display = 'none';
-    document.getElementById('login-email').value = '';
-    document.getElementById('login-password').value = '';
-  };
-
   window.executeLogin = function() {
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    const errorEl = document.getElementById('login-error');
-    
-    signInWithEmailAndPassword(auth, email, password)
-      .then(() => {
-        closeLoginModal();
+    const provider = new GoogleAuthProvider();
+    signInWithPopup(auth, provider)
+      .then((result) => {
+        // ログイン成功時は onAuthStateChanged が発火します
       })
       .catch((error) => {
-        errorEl.innerText = "ログインに失敗しました: " + error.message;
-        errorEl.style.display = 'block';
+        alert("ログインに失敗しました: " + error.message);
       });
   };
 
