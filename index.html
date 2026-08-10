@@ -343,6 +343,9 @@
     <a href="index.html" class="active">🏠 日々のスケジュール</a>
     <a href="monthly_schedule.html">🗓️ 月別・長期スケジュール</a>
   </div>
+  <div style="margin-top: auto; padding: 16px; border-top: 1px solid #f0f0f0;">
+    <button id="logout-btn" onclick="executeLogout()" style="background: #d32f2f; color: #fff; border: none; padding: 10px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; width: 100%; display: none;">ログアウト</button>
+  </div>
 </div>
 <div class="nav-overlay" id="nav-overlay" onclick="toggleNav()"></div>
 
@@ -376,7 +379,6 @@
       </div>
       <div style="display: flex; gap: 8px;">
         <button class="settings-btn" id="login-btn" onclick="executeLogin()" style="background: #4caf50;">編集ログイン</button>
-        <button class="settings-btn" id="logout-btn" onclick="executeLogout()" style="background: #d32f2f; display: none;">ログアウト</button>
         <button class="settings-btn" id="toggle-baby-btn" onclick="toggleBabyCol()" style="background: #0288d1;">👶 とうた</button>
         <button class="settings-btn" onclick="openSettings()">🌙 暗室設定</button>
       </div>
